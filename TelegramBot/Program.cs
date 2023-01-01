@@ -110,7 +110,7 @@ namespace TelegramBot
             }
         }
 
-        // Add a record to "users_list" table with a user's data (chat ID and username)
+        // Add a record to "users_list" table with a user's data (chat ID, username and state)
         static Task AddUser(string chatID, string username)
         {
             try
