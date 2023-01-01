@@ -119,35 +119,14 @@ namespace TelegramBot
                 var DB = new SQLiteConnection($"Data Source={dbName};");
                 DB.Open();
                 SQLiteCommand command = DB.CreateCommand();
-                command.CommandText = "INSERT INTO users_list VALUES (@chatID, @username)";
-                command.Parameters.AddWithValue("@chatID", chatID);
-                command.Parameters.AddWithValue("@username", username);
-                command.ExecuteNonQuery();
-                DB.Close();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[{DateTime.Now}] Pizdec, an error occured: {ex.Message}");
-            }
-            return Task.CompletedTask;
-        }
-
-        // Add a record to "state_machine" table with a user's data (chat ID, username and state)
-        // It's actually a simple implementation of "state machine"
-        static Task AddUserToStatesTable(string chatID, string username)
-        {
-            try
-            {
-                var DB = new SQLiteConnection($"Data Source={dbName};");
-                DB.Open();
-                SQLiteCommand command = DB.CreateCommand();
-                command.CommandText = "INSERT INTO state_machine VALUES (@chatID, @username, @state)";
+                command.CommandText = "INSERT INTO users_list VALUES (@chatID, @username, @state)";
                 command.Parameters.AddWithValue("@chatID", chatID);
                 command.Parameters.AddWithValue("@username", username);
                 command.Parameters.AddWithValue("@state", "usual");
                 command.ExecuteNonQuery();
                 DB.Close();
-            } catch (Exception ex)
+            }
+            catch (Exception ex)
             {
                 Console.WriteLine($"[{DateTime.Now}] Pizdec, an error occured: {ex.Message}");
             }
@@ -207,7 +186,7 @@ namespace TelegramBot
 
         static async Task CancelAction(ITelegramBotClient botClient, Update update, string state)
         {
-            UpdateDB($"UPDATE state_machine SET state='{state}' WHERE chatID='{update.Message.Chat.Id}'");
+            UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{update.Message.Chat.Id}'");
             await botClient.SendTextMessageAsync(
                 chatId: update.Message.Chat.Id,
                 text: "The action was cancelled.",
@@ -220,7 +199,7 @@ namespace TelegramBot
 
             if (message != null)
             {
-                string state = ReadDBRecords($"SELECT state FROM state_machine WHERE chatID='{message.Chat.Id}'");
+                string state = ReadDBRecords($"SELECT state FROM users_list WHERE chatID='{message.Chat.Id}'");
 
                 switch (state)
                 {
@@ -234,7 +213,7 @@ namespace TelegramBot
                             case "modulo":
                                 state = "typefirstnum";
                                 math_oper = message.Text.ToLower();
-                                UpdateDB($"UPDATE state_machine SET state='{state}' WHERE chatID='{update.Message.Chat.Id}'");
+                                UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{update.Message.Chat.Id}'");
                                 break;
                             default:
                                 break;
@@ -246,7 +225,7 @@ namespace TelegramBot
                             state = "typesecondnum";
                             double result = Convert.ToDouble(update.Message.Text);
                             first_num = result;
-                            UpdateDB($"UPDATE state_machine SET state='{state}' WHERE chatID='{update.Message.Chat.Id}'");
+                            UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{update.Message.Chat.Id}'");
                             await botClient.SendTextMessageAsync(
                                 chatId: update.Message.Chat.Id,
                                 text: "Good, now type the second one.");
@@ -271,7 +250,7 @@ namespace TelegramBot
                             {
                                 case "addition":
                                     state = "usual";
-                                    UpdateDB($"UPDATE state_machine SET state='{state}' WHERE chatID='{update.Message.Chat.Id}'");
+                                    UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{update.Message.Chat.Id}'");
                                     await botClient.SendTextMessageAsync(
                                         chatId: update.Message.Chat.Id,
                                         text: $"Great, result is: {first_num} + {second_num} = {first_num + second_num}",
@@ -279,7 +258,7 @@ namespace TelegramBot
                                     break;
                                 case "subtraction":
                                     state = "usual";
-                                    UpdateDB($"UPDATE state_machine SET state='{state}' WHERE chatID='{update.Message.Chat.Id}'");
+                                    UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{update.Message.Chat.Id}'");
                                     await botClient.SendTextMessageAsync(
                                         chatId: update.Message.Chat.Id,
                                         text: $"Great, result is: {first_num} - {second_num} = {first_num - second_num}",
@@ -287,7 +266,7 @@ namespace TelegramBot
                                     break;
                                 case "multiplication":
                                     state = "usual";
-                                    UpdateDB($"UPDATE state_machine SET state='{state}' WHERE chatID='{update.Message.Chat.Id}'");
+                                    UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{update.Message.Chat.Id}'");
                                     await botClient.SendTextMessageAsync(
                                         chatId: update.Message.Chat.Id,
                                         text: $"Great, result is: {first_num} * {second_num} = {first_num * second_num}",
@@ -302,7 +281,7 @@ namespace TelegramBot
                                     } else
                                     {
                                         state = "usual";
-                                        UpdateDB($"UPDATE state_machine SET state='{state}' WHERE chatID='{update.Message.Chat.Id}'");
+                                        UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{update.Message.Chat.Id}'");
                                         await botClient.SendTextMessageAsync(
                                             chatId: update.Message.Chat.Id,
                                             text: $"Great, result is: {first_num} / {second_num} = {first_num / second_num}",
@@ -319,7 +298,7 @@ namespace TelegramBot
                                     else
                                     {
                                         state = "usual";
-                                        UpdateDB($"UPDATE state_machine SET state='{state}' WHERE chatID='{update.Message.Chat.Id}'");
+                                        UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{update.Message.Chat.Id}'");
                                         await botClient.SendTextMessageAsync(
                                             chatId: update.Message.Chat.Id,
                                             text: $"Great, result is: {first_num} % {second_num} = {first_num % second_num}",
@@ -354,8 +333,9 @@ namespace TelegramBot
                                     case "/start":
                                         if (!doesUserExist(message.Chat.Id.ToString()))
                                         {
-                                            await AddUser(message.Chat.Id.ToString(), message.Chat.Username);
-                                            await AddUserToStatesTable(message.Chat.Id.ToString(), message.Chat.Username);
+                                            string[] values = { message.Chat.FirstName, message.Chat.LastName, $"({message.Chat.Username})" };
+                                            string username = string.Join(" ", values);
+                                            await AddUser(message.Chat.Id.ToString(), username);
                                         }
                                         await botClient.SendTextMessageAsync(
                                             chatId: message.Chat.Id,
@@ -363,7 +343,7 @@ namespace TelegramBot
                                         break;
                                     case "/calc":
                                         state = "choosing_option";
-                                        UpdateDB($"UPDATE state_machine SET state='{state}' WHERE chatID='{message.Chat.Id}'");
+                                        UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{message.Chat.Id}'");
                                         await botClient.SendTextMessageAsync(
                                             chatId: message.Chat.Id,
                                             text: "Choose one of the options below:",
