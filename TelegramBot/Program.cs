@@ -345,75 +345,88 @@ namespace TelegramBot
                 switch (update.Type)
                 {
                     case UpdateType.Message:
-                        Console.WriteLine($"[{DateTime.Now}] User '{message.Chat.FirstName}' (ID: {message.Chat.Id}) has sent the following message: '{message.Text}'");
-                        switch (message.Text.ToLower())
+                        switch (message.Type)
                         {
-                            case "/start":
-                                if (!doesUserExist(message.Chat.Id.ToString()))
+                            case MessageType.Text:
+                                Console.WriteLine($"[{DateTime.Now}] User '{message.Chat.FirstName}' (ID: {message.Chat.Id}) has sent the following message: '{message.Text}'");
+                                switch (message.Text.ToLower())
                                 {
-                                    await AddUser(message.Chat.Id.ToString(), message.Chat.Username);
-                                    await AddUserToStatesTable(message.Chat.Id.ToString(), message.Chat.Username);
+                                    case "/start":
+                                        if (!doesUserExist(message.Chat.Id.ToString()))
+                                        {
+                                            await AddUser(message.Chat.Id.ToString(), message.Chat.Username);
+                                            await AddUserToStatesTable(message.Chat.Id.ToString(), message.Chat.Username);
+                                        }
+                                        await botClient.SendTextMessageAsync(
+                                            chatId: message.Chat.Id,
+                                            text: $"Hello there, my friend {message.Chat.FirstName} \U0001F44B. I'm a C# Telegram Bot. What can I do for ya, bruh?");
+                                        break;
+                                    case "/calc":
+                                        state = "choosing_option";
+                                        UpdateDB($"UPDATE state_machine SET state='{state}' WHERE chatID='{message.Chat.Id}'");
+                                        await botClient.SendTextMessageAsync(
+                                            chatId: message.Chat.Id,
+                                            text: "Choose one of the options below:",
+                                            replyMarkup: MathOperationButtons());
+                                        break;
+                                    case "/dice":
+                                        await botClient.SendDiceAsync(message.Chat.Id);
+                                        break;
+                                    case "/link":
+                                        InlineKeyboardMarkup inlineKeyboard = new InlineKeyboardMarkup(new[]{
+                                            new [] {
+                                                InlineKeyboardButton.WithUrl(text: "GitHub", url: "https://github.com/legion2809"),
+                                                InlineKeyboardButton.WithUrl(text: "Instagram", url: "https://instagram.com/sh_yerkanat")
+                                            }
+                                        });
+                                        await botClient.SendTextMessageAsync(
+                                            chatId: message.Chat.Id,
+                                            text: "Here are your links \U00002B07",
+                                            replyMarkup: inlineKeyboard);
+                                        break;
+                                    case "/pic":
+                                        await botClient.SendPhotoAsync(
+                                            chatId: message.Chat.Id,
+                                            photo: "https://raw.githubusercontent.com/TelegramBots/book/master/src/docs/photo-ara.jpg",
+                                            caption: "<b>Ara bird</b>. <i>Source</i>: <a href=\"https://pixabay.com\">Pixabay</a>",
+                                            parseMode: ParseMode.Html);
+                                        break;
+                                    case "/today":
+                                        CultureInfo ci = new CultureInfo("en-US");
+                                        var date = DateTime.Now.ToString("dddd, dd MMMM yyyy", ci);
+                                        await botClient.SendTextMessageAsync(
+                                            chatId: message.Chat.Id,
+                                            text: $"Today's date is: {date}");
+                                        break;
+                                    case "addition":
+                                    case "multiplication":
+                                    case "division":
+                                    case "subtraction":
+                                    case "modulo":
+                                        await botClient.SendTextMessageAsync(
+                                           chatId: message.Chat.Id,
+                                           text: "Type the first number, please.",
+                                           replyMarkup: CancelKeyboardButton());
+                                        break;
+                                    case "cancel":
+                                        state = "usual";
+                                        await CancelAction(botClient, update, state);
+                                        break;
+                                    case "witam":
+                                        await botClient.SendTextMessageAsync(
+                                           chatId: message.Chat.Id,
+                                           text: "Pritam, dude \U0001F44B.",
+                                           replyToMessageId: message.MessageId);
+                                        break;
+                                    default:
+                                        break;
                                 }
+                                break;
+                            case MessageType.Sticker:
+                                Console.WriteLine($"[{DateTime.Now}] User '{message.Chat.FirstName}' (ID: {message.Chat.Id}) has sent the following sticker with ID: '{message.Sticker.FileUniqueId}'");
                                 await botClient.SendTextMessageAsync(
                                     chatId: message.Chat.Id,
-                                    text: $"Hello there, my friend {message.Chat.FirstName} \U0001F44B. I'm a C# Telegram Bot. What can I do for ya, bruh?");
-                                break;
-                            case "/calc":
-                                state = "choosing_option";
-                                UpdateDB($"UPDATE state_machine SET state='{state}' WHERE chatID='{message.Chat.Id}'");
-                                await botClient.SendTextMessageAsync(
-                                    chatId: message.Chat.Id,
-                                    text: "Choose one of the options below:",
-                                    replyMarkup: MathOperationButtons());
-                                break;
-                            case "/dice":
-                                await botClient.SendDiceAsync(message.Chat.Id);
-                                break;
-                            case "/link":
-                                InlineKeyboardMarkup inlineKeyboard = new InlineKeyboardMarkup(new[]{
-                                    new [] {
-                                        InlineKeyboardButton.WithUrl(text: "GitHub", url: "https://github.com/legion2809"),
-                                        InlineKeyboardButton.WithUrl(text: "Instagram", url: "https://instagram.com/sh_yerkanat")
-                                    }
-                                 });
-                                await botClient.SendTextMessageAsync(
-                                    chatId: message.Chat.Id,
-                                    text: "Here are your links \U00002B07",
-                                    replyMarkup: inlineKeyboard);
-                                break;
-                            case "/pic":
-                                await botClient.SendPhotoAsync(
-                                    chatId: message.Chat.Id,
-                                    photo: "https://raw.githubusercontent.com/TelegramBots/book/master/src/docs/photo-ara.jpg",
-                                    caption: "<b>Ara bird</b>. <i>Source</i>: <a href=\"https://pixabay.com\">Pixabay</a>",
-                                    parseMode: ParseMode.Html);
-                                break;
-                            case "/today":
-                                CultureInfo ci = new CultureInfo("en-US");
-                                var date = DateTime.Now.ToString("dddd, dd MMMM yyyy", ci);
-                                await botClient.SendTextMessageAsync(
-                                    chatId: message.Chat.Id,
-                                    text: $"Today's date is: {date}");
-                                break;
-                            case "addition":
-                            case "multiplication":
-                            case "division":
-                            case "subtraction":
-                            case "modulo":
-                                await botClient.SendTextMessageAsync(
-                                   chatId: message.Chat.Id,
-                                   text: "Type the first number, please.",
-                                   replyMarkup: CancelKeyboardButton());
-                                break;
-                            case "cancel":
-                                state = "usual";
-                                await CancelAction(botClient, update, state);
-                                break;
-                            case "witam":
-                                await botClient.SendTextMessageAsync(
-                                   chatId: message.Chat.Id,
-                                   text: "Pritam, dude \U0001F44B.",
-                                   replyToMessageId: message.MessageId);
+                                    text: "Oh, nice sticker, mate \U00001F44C");
                                 break;
                             default:
                                 break;
@@ -429,7 +442,7 @@ namespace TelegramBot
                         }
                         break;
                 }
-            }
+            } 
             #endregion
 
         }
