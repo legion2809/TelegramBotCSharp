@@ -424,7 +424,7 @@ namespace TelegramBot
                                             text: $"Hello there, my friend {message.Chat.FirstName} \U0001F44B. I'm a C# Telegram Bot. What can I do for ya, bruh?");
                                         break;
                                     case "/anonmessage":
-                                        Dictionary<string, string> users = TakeUsersList($"SELECT chatID, username FROM users_list WHERE chatID != '{message.Chat.Id}'");
+                                        Dictionary<string, string> users = TakeUsersList($"SELECT id, username FROM users_list WHERE chatID != '{message.Chat.Id}'");
 
                                         if (users.Count != 0)
                                         {
