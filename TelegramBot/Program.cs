@@ -148,7 +148,7 @@ namespace TelegramBot
                 var DB = new SQLiteConnection($"Data Source={dbName};");
                 DB.Open();
                 SQLiteCommand command = DB.CreateCommand();
-                command.CommandText = "INSERT INTO users_list VALUES (@chatID, @username, @state, @send_message_to)";
+                command.CommandText = "INSERT INTO users_list VALUES (id, @chatID, @username, @state, @send_message_to)";
                 command.Parameters.AddWithValue("@chatID", chatID);
                 command.Parameters.AddWithValue("@username", username);
                 command.Parameters.AddWithValue("@state", "usual");
