@@ -368,7 +368,7 @@ namespace TelegramBot
                         {
                             int id = Convert.ToInt32(message.Text);
                             UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{message.Chat.Id}'");
-                            UpdateDB($"UPDATE users_list SET send_message_to='{id} WHERE chatID='{message.Chat.Id}'");
+                            UpdateDB($"UPDATE users_list SET send_message_to='{id}' WHERE chatID='{message.Chat.Id}'");
 
                             string username = ReadDBRecords($"SELECT username FROM users_list WHERE id='{id}'");
 
@@ -394,10 +394,10 @@ namespace TelegramBot
                         state = "usual";
 
                         string where_send_to = ReadDBRecords($"SELECT send_message_to FROM users_list WHERE chatID='{message.Chat.Id}'");
-                        string chat_id = ReadDBRecords($"SELECT chat_id FROM users_list WHERE id='{where_send_to}'");
+                        string chat_id = ReadDBRecords($"SELECT chatID FROM users_list WHERE id='{where_send_to}'");
 
-                        UpdateDB($"UPDATE users_list SET send_message_to NULL WHERE chatID='{message.Chat.Id}'");
-                        UpdateDB($"UPDATE users_list SET state='{state} WHERE chatID='{message.Chat.Id}'");
+                        UpdateDB($"UPDATE users_list SET send_message_to=NULL WHERE chatID='{message.Chat.Id}'");
+                        UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{message.Chat.Id}'");
 
                         await botClient.SendTextMessageAsync(
                             chatId: chat_id,
