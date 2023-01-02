@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.SQLite;
+using System.IO;
 using System.Globalization;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Telegram.Bot;
@@ -31,7 +33,7 @@ namespace TelegramBot
             botClient.StartReceiving(HandleUpdates, HandleErrors);
 
             Console.WriteLine($"[{DateTime.Now}] Bot {botClient.GetMeAsync().Result.Username} was successfully launched.");
-            
+
             // Checking a connection with SQLite database
             var connection = new SQLiteConnection($"Data Source={dbName};Version=3;New=True;Compress=True;");
 
@@ -108,7 +110,7 @@ namespace TelegramBot
 
             if (dataReader.HasRows)
             {
-                while(dataReader.Read())
+                while (dataReader.Read())
                 {
                     string id = dataReader.GetValue(0).ToString();
                     string username = dataReader.GetValue(1).ToString();
@@ -133,7 +135,8 @@ namespace TelegramBot
                 command.CommandText = query;
                 command.ExecuteNonQuery();
                 DB.Close();
-            } catch (Exception ex)
+            }
+            catch (Exception ex)
             {
                 Console.WriteLine($"[{DateTime.Now}] Pizdec, an error occured: {ex.Message}");
             }
@@ -286,7 +289,7 @@ namespace TelegramBot
                         {
                             double result = Convert.ToDouble(update.Message.Text);
                             second_num = result;
-                            
+
                             switch (math_oper)
                             {
                                 case "addition":
@@ -319,7 +322,8 @@ namespace TelegramBot
                                         await botClient.SendTextMessageAsync(
                                             chatId: message.Chat,
                                             text: "Seems like a 'division by zero' attempt. Type the a number that is different from 0.");
-                                    } else
+                                    }
+                                    else
                                     {
                                         state = "usual";
                                         UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{update.Message.Chat.Id}'");
@@ -375,7 +379,8 @@ namespace TelegramBot
                             await botClient.SendTextMessageAsync(
                                 chatId: message.Chat,
                                 text: $"OK, you chose this user: {username}.\nNow enter the message text you want to send to the user: ");
-                        } catch (FormatException)
+                        }
+                        catch (FormatException)
                         {
                             if (message.Text.ToLower() == "cancel")
                             {
@@ -387,10 +392,9 @@ namespace TelegramBot
                                 chatId: message.Chat,
                                 text: "You didn't type a number!");
                         }
-
-
                         break;
                     case "waiting_a_message":
+
                         state = "usual";
 
                         string where_send_to = ReadDBRecords($"SELECT send_message_to FROM users_list WHERE chatID='{message.Chat.Id}'");
@@ -399,14 +403,86 @@ namespace TelegramBot
                         UpdateDB($"UPDATE users_list SET send_message_to=NULL WHERE chatID='{message.Chat.Id}'");
                         UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{message.Chat.Id}'");
 
-                        await botClient.SendTextMessageAsync(
-                            chatId: chat_id,
-                            text: $"A message for you from anonymous user: {message.Text}",
-                            replyMarkup: new ReplyKeyboardRemove());
-                        await botClient.SendTextMessageAsync(
-                            chatId: message.Chat,
-                            text: $"Message was successfully delivered!", 
-                            replyMarkup: new ReplyKeyboardRemove());
+                        if (message.Type == MessageType.Text)
+                        {
+                            if (message.Text.ToLower() == "cancel")
+                            {
+                                break;
+                            }
+                            else
+                            {
+
+                                await botClient.SendTextMessageAsync(
+                                    chatId: chat_id,
+                                    text: $"A message for you from anonymous user: {message.Text}",
+                                    replyMarkup: new ReplyKeyboardRemove());
+                                await botClient.SendTextMessageAsync(
+                                    chatId: message.Chat,
+                                    text: $"Message was successfully delivered!",
+                                    replyMarkup: new ReplyKeyboardRemove());
+                            }
+                        }
+
+                        if (message.Type == MessageType.Document)
+                        {
+                            var fileId = message.Document.FileId;
+                            var fileInfo = await botClient.GetFileAsync(fileId);
+                            var filePath = fileInfo.FilePath;
+
+                            DirectoryInfo dir = Directory.CreateDirectory($"..//netcoreapp3.1//{message.Chat.Id}");
+
+                            string destinationFilePath = $"{dir}//{message.Document.FileName}";
+
+                            await using Stream fileStream = System.IO.File.OpenWrite(destinationFilePath);
+                            await botClient.DownloadFileAsync(
+                                filePath: filePath,
+                                destination: fileStream);
+                            fileStream.Close();
+
+                            await botClient.SendDocumentAsync(
+                                chatId: chat_id,
+                                document: fileId,
+                                caption: message.Caption == null ? "A document for you from anonymous user.\n\nCaption is empty."
+                                                                 : $"A document for you from anonymous user.\n\nCaption:{message.Caption}",
+                                replyMarkup: new ReplyKeyboardRemove());
+                            await botClient.SendTextMessageAsync(
+                                chatId: message.Chat,
+                                text: $"Message was successfully delivered!",
+                                replyMarkup: new ReplyKeyboardRemove());
+
+                            System.IO.File.Delete(destinationFilePath);
+                        }
+
+                        if (message.Type == MessageType.Photo)
+                        {
+                            var fileId = message.Photo.Last().FileId;
+                            var fileInfo = await botClient.GetFileAsync(fileId);
+                            var filePath = fileInfo.FilePath;
+
+                            DirectoryInfo dir = Directory.CreateDirectory($"..//netcoreapp3.1//{message.Chat.Id}");
+
+                            string destinationFilePath = $"{dir}//{fileId}";
+
+                            await using Stream fileStream = System.IO.File.OpenWrite(destinationFilePath);
+                            await botClient.DownloadFileAsync(
+                                filePath: filePath,
+                                destination: fileStream);
+                            fileStream.Close();
+
+                            await botClient.SendPhotoAsync(
+                                chatId: chat_id,
+                                photo: fileId,
+                                caption: message.Caption == null ? "An image (or photo) for you from anonymous user.\n\nCaption is empty."
+                                                                 : $"An image (or photo) for you from anonymous user.\n\nCaption:{message.Caption}",
+                                replyMarkup: new ReplyKeyboardRemove());
+                            await botClient.SendTextMessageAsync(
+                                chatId: message.Chat,
+                                text: $"Message was successfully delivered!",
+                                replyMarkup: new ReplyKeyboardRemove());
+
+                            System.IO.File.Delete(destinationFilePath);
+                        }
+
                         break;
                     default:
                         break;
@@ -448,7 +524,8 @@ namespace TelegramBot
                                                 chatId: message.Chat,
                                                 text: message_text,
                                                 replyMarkup: CancelKeyboardButton());
-                                        } else
+                                        }
+                                        else
                                         {
                                             state = "usual";
                                             UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{message.Chat.Id}'");
@@ -540,7 +617,7 @@ namespace TelegramBot
                         }
                         break;
                 }
-            } 
+            }
             #endregion
 
         }
