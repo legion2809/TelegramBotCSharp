@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Data.SQLite;
 using System.Globalization;
 using System.Threading;
@@ -91,6 +92,34 @@ namespace TelegramBot
             }
 
             return null;
+        }
+
+        // Reading users list
+        static Dictionary<string, string> TakeUsersList(string query)
+        {
+            Dictionary<string, string> users = new Dictionary<string, string>();
+
+            var DB = new SQLiteConnection($"Data Source={dbName};");
+            DB.Open();
+            SQLiteCommand command = DB.CreateCommand();
+            command.CommandText = query;
+
+            SQLiteDataReader dataReader = command.ExecuteReader();
+
+            if (dataReader.HasRows)
+            {
+                while(dataReader.Read())
+                {
+                    string chatID = dataReader.GetValue(0).ToString();
+                    string username = dataReader.GetValue(1).ToString();
+                    users.Add(chatID, username);
+                }
+            }
+
+            dataReader.Close();
+            DB.Close();
+
+            return users;
         }
 
         // For executing UPDATE queries
@@ -188,7 +217,7 @@ namespace TelegramBot
         {
             UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{update.Message.Chat.Id}'");
             await botClient.SendTextMessageAsync(
-                chatId: update.Message.Chat.Id,
+                chatId: update.Message.Chat,
                 text: "The action was cancelled.",
                 replyMarkup: new ReplyKeyboardRemove());
         }
@@ -213,7 +242,7 @@ namespace TelegramBot
                             case "modulo":
                                 state = "typefirstnum";
                                 math_oper = message.Text.ToLower();
-                                UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{update.Message.Chat.Id}'");
+                                UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{message.Chat.Id}'");
                                 break;
                             default:
                                 break;
@@ -225,9 +254,9 @@ namespace TelegramBot
                             state = "typesecondnum";
                             double result = Convert.ToDouble(update.Message.Text);
                             first_num = result;
-                            UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{update.Message.Chat.Id}'");
+                            UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{message.Chat.Id}'");
                             await botClient.SendTextMessageAsync(
-                                chatId: update.Message.Chat.Id,
+                                chatId: message.Chat,
                                 text: "Good, now type the second one.");
                         }
                         catch (FormatException)
@@ -238,6 +267,9 @@ namespace TelegramBot
                                 await CancelAction(botClient, update, state);
                                 return;
                             }
+                            await botClient.SendTextMessageAsync(
+                                chatId: message.Chat,
+                                text: "You didn't type a number!");
                         }
                         break;
                     case "typesecondnum":
@@ -250,25 +282,25 @@ namespace TelegramBot
                             {
                                 case "addition":
                                     state = "usual";
-                                    UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{update.Message.Chat.Id}'");
+                                    UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{message.Chat.Id}'");
                                     await botClient.SendTextMessageAsync(
-                                        chatId: update.Message.Chat.Id,
+                                        chatId: message.Chat,
                                         text: $"Great, result is: {first_num} + {second_num} = {first_num + second_num}",
                                         replyMarkup: new ReplyKeyboardRemove());
                                     break;
                                 case "subtraction":
                                     state = "usual";
-                                    UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{update.Message.Chat.Id}'");
+                                    UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{message.Chat.Id}'");
                                     await botClient.SendTextMessageAsync(
-                                        chatId: update.Message.Chat.Id,
+                                        chatId: message.Chat,
                                         text: $"Great, result is: {first_num} - {second_num} = {first_num - second_num}",
                                         replyMarkup: new ReplyKeyboardRemove());
                                     break;
                                 case "multiplication":
                                     state = "usual";
-                                    UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{update.Message.Chat.Id}'");
+                                    UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{message.Chat.Id}'");
                                     await botClient.SendTextMessageAsync(
-                                        chatId: update.Message.Chat.Id,
+                                        chatId: message.Chat,
                                         text: $"Great, result is: {first_num} * {second_num} = {first_num * second_num}",
                                         replyMarkup: new ReplyKeyboardRemove());
                                     break;
@@ -276,14 +308,14 @@ namespace TelegramBot
                                     if (second_num == 0)
                                     {
                                         await botClient.SendTextMessageAsync(
-                                            chatId: update.Message.Chat.Id,
+                                            chatId: message.Chat,
                                             text: "Seems like a 'division by zero' attempt. Type the a number that is different from 0.");
                                     } else
                                     {
                                         state = "usual";
                                         UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{update.Message.Chat.Id}'");
                                         await botClient.SendTextMessageAsync(
-                                            chatId: update.Message.Chat.Id,
+                                            chatId: message.Chat,
                                             text: $"Great, result is: {first_num} / {second_num} = {first_num / second_num}",
                                             replyMarkup: new ReplyKeyboardRemove());
                                     }
@@ -292,7 +324,7 @@ namespace TelegramBot
                                     if (second_num == 0)
                                     {
                                         await botClient.SendTextMessageAsync(
-                                            chatId: update.Message.Chat.Id,
+                                            chatId: message.Chat,
                                             text: "Seems like a 'division by zero' attempt. Type the a number that is different from 0.");
                                     }
                                     else
@@ -300,7 +332,7 @@ namespace TelegramBot
                                         state = "usual";
                                         UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{update.Message.Chat.Id}'");
                                         await botClient.SendTextMessageAsync(
-                                            chatId: update.Message.Chat.Id,
+                                            chatId: message.Chat,
                                             text: $"Great, result is: {first_num} % {second_num} = {first_num % second_num}",
                                             replyMarkup: new ReplyKeyboardRemove());
                                     }
@@ -315,7 +347,57 @@ namespace TelegramBot
                                 await CancelAction(botClient, update, state);
                                 return;
                             }
+                            await botClient.SendTextMessageAsync(
+                                chatId: message.Chat,
+                                text: "You didn't type a number!");
                         }
+                        break;
+                    case "waiting_for_userID":
+                        state = "waiting_a_message";
+
+                        try
+                        {
+                            int id = Convert.ToInt32(message.Text);
+                            UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{message.Chat.Id}'");
+                            UpdateDB($"UPDATE users_list SET send_message_to='{id} WHERE chatID='{message.Chat.Id}'");
+
+                            string username = ReadDBRecords($"SELECT username FROM users_list WHERE id='{id}'");
+
+                            await botClient.SendTextMessageAsync(
+                                chatId: message.Chat,
+                                text: $"OK, you chose this user: {username}.\nNow enter the message text you want to send to the user: ");
+                        } catch (FormatException)
+                        {
+                            if (message.Text.ToLower() == "cancel")
+                            {
+                                state = "usual";
+                                await CancelAction(botClient, update, state);
+                                return;
+                            }
+                            await botClient.SendTextMessageAsync(
+                                chatId: message.Chat,
+                                text: "You didn't type a number!");
+                        }
+
+
+                        break;
+                    case "waiting_a_message":
+                        state = "usual";
+
+                        string where_send_to = ReadDBRecords($"SELECT send_message_to FROM users_list WHERE chatID='{message.Chat.Id}'");
+                        string chat_id = ReadDBRecords($"SELECT chat_id FROM users_list WHERE id='{where_send_to}'");
+
+                        UpdateDB($"UPDATE users_list SET send_message_to null WHERE chatID='{message.Chat.Id}'");
+                        UpdateDB($"UPDATE users_list SET state='{state} WHERE chatID='{message.Chat.Id}'");
+
+                        await botClient.SendTextMessageAsync(
+                            chatId: chat_id,
+                            text: $"A message for you from anonymous user: {message.Text}",
+                            replyMarkup: new ReplyKeyboardRemove());
+                        await botClient.SendTextMessageAsync(
+                            chatId: message.Chat,
+                            text: $"Message was successfully delivered!", 
+                            replyMarkup: new ReplyKeyboardRemove());
                         break;
                     default:
                         break;
@@ -338,19 +420,52 @@ namespace TelegramBot
                                             await AddUser(message.Chat.Id.ToString(), username);
                                         }
                                         await botClient.SendTextMessageAsync(
-                                            chatId: message.Chat.Id,
+                                            chatId: message.Chat,
                                             text: $"Hello there, my friend {message.Chat.FirstName} \U0001F44B. I'm a C# Telegram Bot. What can I do for ya, bruh?");
+                                        break;
+                                    case "/anonmessage":
+                                        Dictionary<string, string> users = TakeUsersList($"SELECT chatID, username FROM users_list WHERE chatID != '{message.Chat.Id}'");
+
+                                        if (users.Count != 0)
+                                        {
+                                            string resultset;
+                                            string message_text = "List of users to whom you can send a message: \n\n";
+
+                                            foreach (var item in users)
+                                            {
+                                                resultset = $"(ID: {item.Key}) {item.Value}\n";
+                                                message_text = message_text + resultset;
+                                            }
+                                            message_text = $"{message_text}\nEnter the ID of the user you want to send the message to:";
+
+                                            state = "waiting_for_userID";
+                                            UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{message.Chat.Id}'");
+
+                                            await botClient.SendTextMessageAsync(
+                                                chatId: message.Chat,
+                                                text: message_text,
+                                                replyMarkup: CancelKeyboardButton());
+                                        } else
+                                        {
+                                            state = "usual";
+                                            UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{message.Chat.Id}'");
+
+                                            await botClient.SendTextMessageAsync(
+                                                chatId: message.Chat,
+                                                text: "Unfortunately, there are no users to whom you can send a message :(",
+                                                replyMarkup: new ReplyKeyboardRemove());
+                                        }
                                         break;
                                     case "/calc":
                                         state = "choosing_option";
                                         UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{message.Chat.Id}'");
                                         await botClient.SendTextMessageAsync(
-                                            chatId: message.Chat.Id,
+                                            chatId: message.Chat,
                                             text: "Choose one of the options below:",
                                             replyMarkup: MathOperationButtons());
                                         break;
                                     case "/dice":
-                                        await botClient.SendDiceAsync(message.Chat.Id);
+                                        await botClient.SendDiceAsync(message.Chat);
                                         break;
                                     case "/link":
                                         InlineKeyboardMarkup inlineKeyboard = new InlineKeyboardMarkup(new[]{
@@ -360,13 +475,13 @@ namespace TelegramBot
                                             }
                                         });
                                         await botClient.SendTextMessageAsync(
-                                            chatId: message.Chat.Id,
+                                            chatId: message.Chat,
                                             text: "Here are your links \U00002B07",
                                             replyMarkup: inlineKeyboard);
                                         break;
                                     case "/pic":
                                         await botClient.SendPhotoAsync(
-                                            chatId: message.Chat.Id,
+                                            chatId: message.Chat,
                                             photo: "https://raw.githubusercontent.com/TelegramBots/book/master/src/docs/photo-ara.jpg",
                                             caption: "<b>Ara bird</b>. <i>Source</i>: <a href=\"https://pixabay.com\">Pixabay</a>",
                                             parseMode: ParseMode.Html);
@@ -375,7 +490,7 @@ namespace TelegramBot
                                         CultureInfo ci = new CultureInfo("en-US");
                                         var date = DateTime.Now.ToString("dddd, dd MMMM yyyy", ci);
                                         await botClient.SendTextMessageAsync(
-                                            chatId: message.Chat.Id,
+                                            chatId: message.Chat,
                                             text: $"Today's date is: {date}");
                                         break;
                                     case "addition":
@@ -384,7 +499,7 @@ namespace TelegramBot
                                     case "subtraction":
                                     case "modulo":
                                         await botClient.SendTextMessageAsync(
-                                           chatId: message.Chat.Id,
+                                           chatId: message.Chat,
                                            text: "Type the first number, please.",
                                            replyMarkup: CancelKeyboardButton());
                                         break;
@@ -394,7 +509,7 @@ namespace TelegramBot
                                         break;
                                     case "witam":
                                         await botClient.SendTextMessageAsync(
-                                           chatId: message.Chat.Id,
+                                           chatId: message.Chat,
                                            text: "Pritam, dude \U0001F44B.",
                                            replyToMessageId: message.MessageId);
                                         break;
@@ -405,8 +520,8 @@ namespace TelegramBot
                             case MessageType.Sticker:
                                 Console.WriteLine($"[{DateTime.Now}] User '{message.Chat.FirstName}' (ID: {message.Chat.Id}) has sent the following sticker with ID: '{message.Sticker.FileUniqueId}'");
                                 await botClient.SendTextMessageAsync(
-                                    chatId: message.Chat.Id,
-                                    text: "Oh, nice sticker, mate \U00001F44C");
+                                    chatId: message.Chat,
+                                    text: "Oh, nice sticker, mate \U0001F44C");
                                 break;
                             default:
                                 break;
