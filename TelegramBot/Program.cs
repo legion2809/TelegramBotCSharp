@@ -228,6 +228,14 @@ namespace TelegramBot
 
             if (message != null)
             {
+
+                if (!doesUserExist(message.Chat.Id.ToString()))
+                {
+                    string[] values = { message.Chat.FirstName, message.Chat.LastName, $"({message.Chat.Username})" };
+                    string username = string.Join(" ", values);
+                    await AddUser(message.Chat.Id.ToString(), username);
+                }
+
                 string state = ReadDBRecords($"SELECT state FROM users_list WHERE chatID='{message.Chat.Id}'");
 
                 switch (state)
@@ -413,12 +421,6 @@ namespace TelegramBot
                                 switch (message.Text.ToLower())
                                 {
                                     case "/start":
-                                        if (!doesUserExist(message.Chat.Id.ToString()))
-                                        {
-                                            string[] values = { message.Chat.FirstName, message.Chat.LastName, $"({message.Chat.Username})" };
-                                            string username = string.Join(" ", values);
-                                            await AddUser(message.Chat.Id.ToString(), username);
-                                        }
                                         await botClient.SendTextMessageAsync(
                                             chatId: message.Chat,
                                             text: $"Hello there, my friend {message.Chat.FirstName} \U0001F44B. I'm a C# Telegram Bot. What can I do for ya, bruh?");
