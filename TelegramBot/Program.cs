@@ -110,9 +110,9 @@ namespace TelegramBot
             {
                 while(dataReader.Read())
                 {
-                    string chatID = dataReader.GetValue(0).ToString();
+                    string id = dataReader.GetValue(0).ToString();
                     string username = dataReader.GetValue(1).ToString();
-                    users.Add(chatID, username);
+                    users.Add(id, username);
                 }
             }
 
@@ -148,7 +148,7 @@ namespace TelegramBot
                 var DB = new SQLiteConnection($"Data Source={dbName};");
                 DB.Open();
                 SQLiteCommand command = DB.CreateCommand();
-                command.CommandText = "INSERT INTO users_list VALUES (id, @chatID, @username, @state, @send_message_to)";
+                command.CommandText = "INSERT INTO users_list VALUES (NULL, @chatID, @username, @state, @send_message_to)";
                 command.Parameters.AddWithValue("@chatID", chatID);
                 command.Parameters.AddWithValue("@username", username);
                 command.Parameters.AddWithValue("@state", "usual");
@@ -396,7 +396,7 @@ namespace TelegramBot
                         string where_send_to = ReadDBRecords($"SELECT send_message_to FROM users_list WHERE chatID='{message.Chat.Id}'");
                         string chat_id = ReadDBRecords($"SELECT chat_id FROM users_list WHERE id='{where_send_to}'");
 
-                        UpdateDB($"UPDATE users_list SET send_message_to null WHERE chatID='{message.Chat.Id}'");
+                        UpdateDB($"UPDATE users_list SET send_message_to NULL WHERE chatID='{message.Chat.Id}'");
                         UpdateDB($"UPDATE users_list SET state='{state} WHERE chatID='{message.Chat.Id}'");
 
                         await botClient.SendTextMessageAsync(
