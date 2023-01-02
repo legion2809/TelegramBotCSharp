@@ -19,7 +19,7 @@ namespace TelegramBot
                             Console.WriteLine($"[{DateTime.Now}] User '{message.Chat.FirstName}' (ID: {message.Chat.Id}) has sent the following message: '{message.Text}'");
                             break;
                         case MessageType.Photo:
-                            Console.WriteLine($"[{DateTime.Now}] User '{message.Chat.FirstName}' (ID: {message.Chat.Id}) has sent the picture with ID: '{message.Photo.Last().FileId}'");
+                            Console.WriteLine($"[{DateTime.Now}] User '{message.Chat.FirstName}' (ID: {message.Chat.Id}) has sent the picture with ID: '{message.Photo.Last().FileUniqueId}'");
                             break;
                         case MessageType.Document:
                             Console.WriteLine($"[{DateTime.Now}] User '{message.Chat.FirstName}' (ID: {message.Chat.Id}) has sent the document with name: '{message.Document.FileName}'");
@@ -34,7 +34,7 @@ namespace TelegramBot
                             Console.WriteLine($"[{DateTime.Now}] User '{message.Chat.FirstName}' (ID: {message.Chat.Id}) has sent the audio with name: '{message.Audio.FileName}'");
                             break;
                         case MessageType.Sticker:
-                            Console.WriteLine($"[{DateTime.Now}] User '{message.Chat.FirstName}' (ID: {message.Chat.Id}) has sent the sticker with ID: '{message.Sticker.FileId}'");
+                            Console.WriteLine($"[{DateTime.Now}] User '{message.Chat.FirstName}' (ID: {message.Chat.Id}) has sent the sticker with ID: '{message.Sticker.FileUniqueId}'");
                             break;
                         default:
                             Console.WriteLine($"[{DateTime.Now}] User '{message.Chat.FirstName}' (ID: {message.Chat.Id}) has sent the message with type: '{message.Type}'");
