@@ -525,7 +525,61 @@ namespace TelegramBot
                                             replyMarkup: MathOperationButtons());
                                         break;
                                     case "/dice":
-                                        await botClient.SendDiceAsync(message.Chat);
+                                        Random rnd = new Random();
+                                        int randNum = rnd.Next(1, 7);
+                                        
+                                        switch (randNum)
+                                        {
+                                            case 1:
+                                                await botClient.SendTextMessageAsync(
+                                                    chatId: message.Chat,
+                                                    text: $"Number rolled: {randNum}");
+                                                await botClient.SendStickerAsync(
+                                                    message.Chat, 
+                                                    sticker: "CAACAgIAAxkBAAIEz2OzJXjc3RnGKrFOE_5BPu0gz4-8AALcxgEAAWOLRgyxtRIUSi4a_y0E");
+                                                break;
+                                            case 2:
+                                                await botClient.SendTextMessageAsync(
+                                                    chatId: message.Chat,
+                                                    text: $"Number rolled: {randNum}");
+                                                await botClient.SendStickerAsync(
+                                                    message.Chat,
+                                                    sticker: "CAACAgIAAxkBAAIE0GOzJYBAnry97DeRm1jbw3i8HEOeAALdxgEAAWOLRgzrTyk77CMCUS0E");
+                                                break;
+                                            case 3:
+                                                await botClient.SendTextMessageAsync(
+                                                    chatId: message.Chat,
+                                                    text: $"Number rolled: {randNum}");
+                                                await botClient.SendStickerAsync(
+                                                    message.Chat,
+                                                    sticker: "CAACAgIAAxkBAAIE0WOzJZQ4uxEbX6WyeZM0ih2PFv48AALexgEAAWOLRgxUcf2Fq_sguS0E");
+                                                break;
+                                            case 4:
+                                                await botClient.SendTextMessageAsync(
+                                                    chatId: message.Chat,
+                                                    text: $"Number rolled: {randNum}");
+                                                await botClient.SendStickerAsync(
+                                                    message.Chat,
+                                                    sticker: "CAACAgIAAxkBAAIE0mOzJa7-UnwOy3ZITOqpJYaOP33cAALfxgEAAWOLRgwcRRMg1btjFy0E");
+                                                break;
+                                            case 5:
+                                                await botClient.SendTextMessageAsync(
+                                                    chatId: message.Chat,
+                                                    text: $"Number rolled: {randNum}");
+                                                await botClient.SendStickerAsync(
+                                                    message.Chat,
+                                                    sticker: "CAACAgIAAxkBAAIE02OzJb8Fl8TdvPYb7S1sRB46LLbCAALgxgEAAWOLRgxIsfP6yP8mqS0E");
+                                                break;
+                                            case 6:
+                                                await botClient.SendTextMessageAsync(
+                                                    chatId: message.Chat,
+                                                    text: $"Number rolled: {randNum}");
+                                                await botClient.SendStickerAsync(
+                                                    message.Chat,
+                                                    sticker: "CAACAgIAAxkBAAIE1GOzJeZ3wfH-rxYyF2ZKl6JdlWiuAALhxgEAAWOLRgzvmnzNp7-0ei0E");
+                                                break;
+                                        }
+
                                         break;
                                     case "/link":
                                         InlineKeyboardMarkup inlineKeyboard = new InlineKeyboardMarkup(new[]{
@@ -542,8 +596,8 @@ namespace TelegramBot
                                     case "/pic":
                                         await botClient.SendPhotoAsync(
                                             chatId: message.Chat,
-                                            photo: "https://raw.githubusercontent.com/TelegramBots/book/master/src/docs/photo-ara.jpg",
-                                            caption: "<b>Ara bird</b>. <i>Source</i>: <a href=\"https://pixabay.com\">Pixabay</a>",
+                                            photo: "https://media.discordapp.net/attachments/748112995606986803/1059547380132876328/durka.png",
+                                            caption: "<b>Durka, ebat'</b>",
                                             parseMode: ParseMode.Html);
                                         break;
                                     case "/today":
