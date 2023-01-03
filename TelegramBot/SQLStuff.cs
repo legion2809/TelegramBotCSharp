@@ -9,16 +9,25 @@ namespace TelegramBot
     {
         public static string dbName = "users.db";
 
+        static void SQLQueriesLog(string query_text)
+        {
+            Console.WriteLine($"[{DateTime.Now}] A following SQL query was executed: {query_text}", Console.ForegroundColor = ConsoleColor.Yellow);
+            Console.ResetColor();
+        }
+
         public static bool doesUserExist(string chatID)
         {
             var DB = new SQLiteConnection($"Data Source={dbName};");
             DB.Open();
             SQLiteCommand command = DB.CreateCommand();
             command.CommandText = "SELECT count(*) FROM users_list WHERE chatID=@chatID";
+            string query = command.CommandText;
             command.Parameters.AddWithValue("@chatID", chatID);
 
             int count = Convert.ToInt32(command.ExecuteScalar());
             DB.Close();
+
+            SQLQueriesLog(query);
 
             if (count == 0)
             {
@@ -47,6 +56,7 @@ namespace TelegramBot
                 return resultset;
             }
 
+            SQLQueriesLog(query);
             return null;
         }
 
@@ -75,6 +85,7 @@ namespace TelegramBot
             dataReader.Close();
             DB.Close();
 
+            SQLQueriesLog(query);
             return users;
         }
 
@@ -89,6 +100,7 @@ namespace TelegramBot
                 command.CommandText = query;
                 command.ExecuteNonQuery();
                 DB.Close();
+                SQLQueriesLog(query);
             }
             catch (Exception ex)
             {
@@ -106,12 +118,14 @@ namespace TelegramBot
                 DB.Open();
                 SQLiteCommand command = DB.CreateCommand();
                 command.CommandText = "INSERT INTO users_list VALUES (NULL, @chatID, @username, @state, @send_message_to)";
+                string query = command.CommandText;
                 command.Parameters.AddWithValue("@chatID", chatID);
                 command.Parameters.AddWithValue("@username", username);
                 command.Parameters.AddWithValue("@state", "usual");
                 command.Parameters.AddWithValue("@send_message_to", null);
                 command.ExecuteNonQuery();
                 DB.Close();
+                SQLQueriesLog(query);
             }
             catch (Exception ex)
             {
