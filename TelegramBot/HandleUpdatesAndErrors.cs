@@ -54,13 +54,14 @@ internal partial class HandleUpdatesAndErrors
 
     #region Send various types of messages to other user
     // Send specific messages to user (for /anonmessage command)
-    static async Task SendSpecificMessage(ITelegramBotClient botClient, Update update, string chat_id, string state)
+    static async Task SendSpecificMessage(ITelegramBotClient botClient, Update update, string chat_id)
     {
         switch (update.Message.Type)
         {
             case MessageType.Text:
                 if (update.Message.Text.ToLower() == "cancel")
                 {
+                    string state = "usual";
                     await CancelAction(botClient, update, state);
                     break;
                 }
@@ -180,7 +181,7 @@ internal partial class HandleUpdatesAndErrors
 
                 dir = Directory.CreateDirectory($"..//net6.0//VariousTrash//{update.Message.Chat.Id}");
 
-                destinationFilePath = $"{dir}//{fileId}";
+                destinationFilePath = $"{dir}//{fileInfo.FilePath.Substring(fileInfo.FilePath.IndexOf("/") + 1)}";
 
                 await using (Stream fileStream = System.IO.File.OpenWrite(destinationFilePath))
                 {
@@ -222,6 +223,33 @@ internal partial class HandleUpdatesAndErrors
                         video: fileId,
                         caption: update.Message.Caption == null ? "A video for you from anonymous user.\n\nCaption is empty."
                                                          : $"A video for you from anonymous user.\n\nCaption: {update.Message.Caption}",
+                        replyMarkup: new ReplyKeyboardRemove());
+                }
+
+                System.IO.File.Delete(destinationFilePath);
+                break;
+            case MessageType.VideoNote:
+                fileId = update.Message.VideoNote.FileId;
+                fileInfo = await botClient.GetFileAsync(fileId);
+                filePath = fileInfo.FilePath;
+
+                dir = Directory.CreateDirectory($"..//net6.0//VariousTrash//{update.Message.Chat.Id}");
+
+                destinationFilePath = $"{dir}//{fileInfo.FilePath.Substring(fileInfo.FilePath.IndexOf("/") + 1)}";
+
+                await using (Stream fileStream = System.IO.File.OpenWrite(destinationFilePath))
+                {
+                    await botClient.DownloadFileAsync(
+                        filePath: filePath,
+                        destination: fileStream);
+                }
+
+                await using (Stream readStream = System.IO.File.OpenRead(destinationFilePath))
+                {
+                    await botClient.SendVideoNoteAsync(
+                        chatId: chat_id,
+                        videoNote: fileId,
+                        duration: update.Message.VideoNote.Duration,
                         replyMarkup: new ReplyKeyboardRemove());
                 }
 
@@ -439,7 +467,7 @@ internal partial class HandleUpdatesAndErrors
                     SQLStuff.UpdateDB($"UPDATE users_list SET send_message_to=NULL WHERE chatID='{message.Chat.Id}'");
                     SQLStuff.UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{message.Chat.Id}'");
 
-                    await SendSpecificMessage(botClient, update, chat_id, state);
+                    await SendSpecificMessage(botClient, update, chat_id);
 
                     await botClient.SendTextMessageAsync(
                         chatId: message.Chat,
