@@ -19,7 +19,7 @@ namespace TelegramBot
         // for /calc command
         static double first_num = 0, second_num = 0;
         static string math_oper = "";
-     
+
         #region Reply and inline keyboards
 
         static ReplyKeyboardMarkup MathOperationButtons()
@@ -66,6 +66,191 @@ namespace TelegramBot
 
         #endregion
 
+        #region Send various types of messages to other user
+        // Send specific messages to user (for /anonmessage command)
+        static async Task SendSpecificMessage(ITelegramBotClient botClient, Update update, string chat_id, string state)
+        {
+            switch (update.Message.Type)
+            {
+                case MessageType.Text:
+                    if (update.Message.Text.ToLower() == "cancel")
+                    {
+                        await CancelAction(botClient, update, state);
+                        break;
+                    }
+
+                    await botClient.SendTextMessageAsync(
+                        chatId: chat_id,
+                        text: $"A message for you from anonymous user: {update.Message.Text}",
+                        replyMarkup: new ReplyKeyboardRemove());
+                    break;
+                case MessageType.Document:
+                    var fileId = update.Message.Document.FileId;
+                    var fileInfo = await botClient.GetFileAsync(fileId);
+                    var filePath = fileInfo.FilePath;
+
+                    DirectoryInfo dir = Directory.CreateDirectory($"..//net6.0//VariousTrash//{update.Message.Chat.Id}");
+
+                    string destinationFilePath = $"{dir}//{update.Message.Document.FileName}";
+
+                    await using (Stream fileStream = System.IO.File.OpenWrite(destinationFilePath))
+                    {
+                        await botClient.DownloadFileAsync(
+                            filePath: filePath,
+                            destination: fileStream);
+                    }
+
+                    await botClient.SendDocumentAsync(
+                        chatId: chat_id,
+                        document: fileId,
+                        caption: update.Message.Caption == null ? "A document for you from anonymous user.\n\nCaption is empty."
+                                                         : $"A document for you from anonymous user.\n\nCaption: {update.Message.Caption}",
+                        replyMarkup: new ReplyKeyboardRemove());
+
+                    System.IO.File.Delete(destinationFilePath);
+                    break;
+                case MessageType.Photo:
+                    fileId = update.Message.Photo.Last().FileId;
+                    fileInfo = await botClient.GetFileAsync(fileId);
+                    filePath = fileInfo.FilePath;
+
+                    dir = Directory.CreateDirectory($"..//net6.0//VariousTrash//{update.Message.Chat.Id}");
+
+                    destinationFilePath = $"{dir}//{fileId}";
+
+                    await using (Stream fileStream = System.IO.File.OpenWrite(destinationFilePath))
+                    {
+                        await botClient.DownloadFileAsync(
+                            filePath: filePath,
+                            destination: fileStream);
+                    }
+
+                    await botClient.SendPhotoAsync(
+                        chatId: chat_id,
+                        photo: fileId,
+                        caption: update.Message.Caption == null ? "An image (or photo) for you from anonymous user.\n\nCaption is empty."
+                                                         : $"An image (or photo) for you from anonymous user.\n\nCaption: {update.Message.Caption}",
+                        replyMarkup: new ReplyKeyboardRemove());
+
+                    System.IO.File.Delete(destinationFilePath);
+                    break;
+                case MessageType.Audio:
+                    fileId = update.Message.Audio.FileId;
+                    fileInfo = await botClient.GetFileAsync(fileId);
+                    filePath = fileInfo.FilePath;
+
+                    dir = Directory.CreateDirectory($"..//net6.0//VariousTrash//{update.Message.Chat.Id}");
+
+                    destinationFilePath = $"{dir}//{update.Message.Audio.FileName}";
+
+                    await using (Stream fileStream = System.IO.File.OpenWrite(destinationFilePath))
+                    {
+                        await botClient.DownloadFileAsync(
+                            filePath: filePath,
+                            destination: fileStream);
+                    }
+
+                    await botClient.SendAudioAsync(
+                        chatId: chat_id,
+                        audio: fileId,
+                        caption: update.Message.Caption == null ? "An audio for you from anonymous user.\n\nCaption is empty."
+                                                         : $"An audio for you from anonymous user.\n\nCaption: {update.Message.Caption}",
+                        replyMarkup: new ReplyKeyboardRemove());
+
+                    System.IO.File.Delete(destinationFilePath);
+                    break;
+                case MessageType.Voice:
+                    fileId = update.Message.Voice.FileId;
+                    fileInfo = await botClient.GetFileAsync(fileId);
+                    filePath = fileInfo.FilePath;
+
+                    dir = Directory.CreateDirectory($"..//net6.0//VariousTrash//{update.Message.Chat.Id}");
+
+                    destinationFilePath = $"{dir}//{fileId}";
+
+                    await using (Stream fileStream = System.IO.File.OpenWrite(destinationFilePath))
+                    {
+                        await botClient.DownloadFileAsync(
+                            filePath: filePath,
+                            destination: fileStream);
+                    }
+
+                    await using (Stream readStream = System.IO.File.OpenRead(destinationFilePath))
+                    {
+                        await botClient.SendVoiceAsync(
+                            chatId: chat_id,
+                            voice: readStream,
+                            caption: update.Message.Caption == null ? "A voice message for you from anonymous user.\n\nCaption is empty."
+                                                             : $"A voice message for you from anonymous user.\n\nCaption: {update.Message.Caption}",
+                            replyMarkup: new ReplyKeyboardRemove());
+                    }
+
+                    System.IO.File.Delete(destinationFilePath);
+                    break;
+                case MessageType.Sticker:
+                    fileId = update.Message.Sticker.FileId;
+                    fileInfo = await botClient.GetFileAsync(fileId);
+                    filePath = fileInfo.FilePath;
+
+                    dir = Directory.CreateDirectory($"..//net6.0//VariousTrash//{update.Message.Chat.Id}");
+
+                    destinationFilePath = $"{dir}//{fileId}";
+
+                    await using (Stream fileStream = System.IO.File.OpenWrite(destinationFilePath))
+                    {
+                        await botClient.DownloadFileAsync(
+                            filePath: filePath,
+                            destination: fileStream);
+                    }
+
+                    await using (Stream readStream = System.IO.File.OpenRead(destinationFilePath))
+                    {
+                        await botClient.SendStickerAsync(
+                            chatId: chat_id,
+                            sticker: fileId,
+                            replyMarkup: new ReplyKeyboardRemove());
+                    }
+
+                    System.IO.File.Delete(destinationFilePath);
+                    break;
+                case MessageType.Video:
+                    fileId = update.Message.Video.FileId;
+                    fileInfo = await botClient.GetFileAsync(fileId);
+                    filePath = fileInfo.FilePath;
+
+                    dir = Directory.CreateDirectory($"..//net6.0//VariousTrash//{update.Message.Chat.Id}");
+
+                    destinationFilePath = $"{dir}//{update.Message.Video.FileName}";
+
+                    await using (Stream fileStream = System.IO.File.OpenWrite(destinationFilePath))
+                    {
+                        await botClient.DownloadFileAsync(
+                            filePath: filePath,
+                            destination: fileStream);
+                    }
+
+                    await using (Stream readStream = System.IO.File.OpenRead(destinationFilePath))
+                    {
+                        await botClient.SendVideoAsync(
+                            chatId: chat_id,
+                            video: fileId,
+                            caption: update.Message.Caption == null ? "A video for you from anonymous user.\n\nCaption is empty."
+                                                             : $"A video for you from anonymous user.\n\nCaption: {update.Message.Caption}",
+                            replyMarkup: new ReplyKeyboardRemove());
+                    }
+
+                    System.IO.File.Delete(destinationFilePath);
+                    break;
+                default:
+                    await botClient.SendTextMessageAsync(
+                        chatId: update.Message.Chat.Id,
+                        text: "This type of message isn't supported. Try the supported one, please.",
+                        replyMarkup: new ReplyKeyboardRemove());
+                    break;
+            }
+        }
+        #endregion
+
         #region Handling updates and Telegram API errors
 
         // Handling Telegram API errors
@@ -77,7 +262,9 @@ namespace TelegramBot
                     => $"Telegram API Error (Code {apiRequestException.ErrorCode}): '{apiRequestException.Message}'",
                 _ => exception.ToString()
             };
+            Console.ForegroundColor = ConsoleColor.Red;
             Console.WriteLine($"[{DateTime.Now}] {ErrorMessage}");
+            Console.ResetColor();
             return Task.CompletedTask;
         }
 
@@ -113,6 +300,12 @@ namespace TelegramBot
                                 SQLStuff.UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{message.Chat.Id}'");
                                 break;
                             default:
+                                if (message.Text.ToLower() == "cancel")
+                                {
+                                    state = "usual";
+                                    await CancelAction(botClient, update, state);
+                                    break;
+                                }
                                 break;
                         }
                         break;
@@ -133,7 +326,7 @@ namespace TelegramBot
                             {
                                 state = "usual";
                                 await CancelAction(botClient, update, state);
-                                return;
+                                break;
                             }
                             await botClient.SendTextMessageAsync(
                                 chatId: message.Chat,
@@ -214,7 +407,7 @@ namespace TelegramBot
                             {
                                 state = "usual";
                                 await CancelAction(botClient, update, state);
-                                return;
+                                break;
                             }
                             await botClient.SendTextMessageAsync(
                                 chatId: message.Chat,
@@ -243,7 +436,7 @@ namespace TelegramBot
                             {
                                 state = "usual";
                                 await CancelAction(botClient, update, state);
-                                return;
+                                break;
                             }
                             await botClient.SendTextMessageAsync(
                                 chatId: message.Chat,
@@ -260,210 +453,12 @@ namespace TelegramBot
                         SQLStuff.UpdateDB($"UPDATE users_list SET send_message_to=NULL WHERE chatID='{message.Chat.Id}'");
                         SQLStuff.UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{message.Chat.Id}'");
 
-                        if (message.Type == MessageType.Text)
-                        {
-                            if (message.Text.ToLower() == "cancel")
-                            {
-                                break;
-                            }
+                        await SendSpecificMessage(botClient, update, chat_id, state);
 
-                            await botClient.SendTextMessageAsync(
-                                chatId: chat_id,
-                                text: $"A message for you from anonymous user: {message.Text}",
-                                replyMarkup: new ReplyKeyboardRemove());
-                            await botClient.SendTextMessageAsync(
-                                chatId: message.Chat,
-                                text: $"Message was successfully delivered!",
-                                replyMarkup: new ReplyKeyboardRemove());
-                        }
-
-                        if (message.Type == MessageType.Document)
-                        {
-                            var fileId = message.Document.FileId;
-                            var fileInfo = await botClient.GetFileAsync(fileId);
-                            var filePath = fileInfo.FilePath;
-
-                            DirectoryInfo dir = Directory.CreateDirectory($"..//netcoreapp3.1//VariousTrash//{message.Chat.Id}");
-
-                            string destinationFilePath = $"{dir}//{message.Document.FileName}";
-
-                            await using Stream fileStream = System.IO.File.OpenWrite(destinationFilePath);
-                            await botClient.DownloadFileAsync(
-                                filePath: filePath,
-                                destination: fileStream);
-                            fileStream.Close();
-
-                            await botClient.SendDocumentAsync(
-                                chatId: chat_id,
-                                document: fileId,
-                                caption: message.Caption == null ? "A document for you from anonymous user.\n\nCaption is empty."
-                                                                 : $"A document for you from anonymous user.\n\nCaption:{message.Caption}",
-                                replyMarkup: new ReplyKeyboardRemove());
-                            await botClient.SendTextMessageAsync(
-                                chatId: message.Chat,
-                                text: $"Message was successfully delivered!",
-                                replyMarkup: new ReplyKeyboardRemove());
-
-                            System.IO.File.Delete(destinationFilePath);
-                        }
-
-                        if (message.Type == MessageType.Photo)
-                        {
-                            var fileId = message.Photo.Last().FileId;
-                            var fileInfo = await botClient.GetFileAsync(fileId);
-                            var filePath = fileInfo.FilePath;
-
-                            DirectoryInfo dir = Directory.CreateDirectory($"..//netcoreapp3.1//VariousTrash//{message.Chat.Id}");
-
-                            string destinationFilePath = $"{dir}//{fileId}";
-
-                            await using Stream fileStream = System.IO.File.OpenWrite(destinationFilePath);
-                            await botClient.DownloadFileAsync(
-                                filePath: filePath,
-                                destination: fileStream);
-                            fileStream.Close();
-
-                            await botClient.SendPhotoAsync(
-                                chatId: chat_id,
-                                photo: fileId,
-                                caption: message.Caption == null ? "An image (or photo) for you from anonymous user.\n\nCaption is empty."
-                                                                 : $"An image (or photo) for you from anonymous user.\n\nCaption:{message.Caption}",
-                                replyMarkup: new ReplyKeyboardRemove());
-                            await botClient.SendTextMessageAsync(
-                                chatId: message.Chat,
-                                text: $"Message was successfully delivered!",
-                                replyMarkup: new ReplyKeyboardRemove());
-
-                            System.IO.File.Delete(destinationFilePath);
-                        }
-
-                        if (message.Type == MessageType.Audio)
-                        {
-                            var fileId = message.Audio.FileId;
-                            var fileInfo = await botClient.GetFileAsync(fileId);
-                            var filePath = fileInfo.FilePath;
-
-                            DirectoryInfo dir = Directory.CreateDirectory($"..//netcoreapp3.1//VariousTrash//{message.Chat.Id}");
-
-                            string destinationFilePath = $"{dir}//{message.Audio.FileName}";
-
-                            await using Stream fileStream = System.IO.File.OpenWrite(destinationFilePath);
-                            await botClient.DownloadFileAsync(
-                                filePath: filePath,
-                                destination: fileStream);
-                            fileStream.Close();
-
-                            await botClient.SendAudioAsync(
-                                chatId: chat_id,
-                                audio: fileId,
-                                caption: message.Caption == null ? "An audio for you from anonymous user.\n\nCaption is empty."
-                                                                 : $"An audio for you from anonymous user.\n\nCaption:{message.Caption}",
-                                replyMarkup: new ReplyKeyboardRemove());
-                            await botClient.SendTextMessageAsync(
-                                chatId: message.Chat,
-                                text: $"Message was successfully delivered!",
-                                replyMarkup: new ReplyKeyboardRemove());
-
-                            System.IO.File.Delete(destinationFilePath);
-                        }
-
-                        if (message.Type == MessageType.Voice)
-                        {
-                            var fileId = message.Voice.FileId;
-                            var fileInfo = await botClient.GetFileAsync(fileId);
-                            var filePath = fileInfo.FilePath;
-
-                            DirectoryInfo dir = Directory.CreateDirectory($"..//netcoreapp3.1//VariousTrash//{message.Chat.Id}");
-
-                            string destinationFilePath = $"{dir}//{fileId}";
-
-                            await using Stream writeStream = System.IO.File.OpenWrite(destinationFilePath);
-                            await botClient.DownloadFileAsync(
-                                filePath: filePath,
-                                destination: writeStream);
-                            writeStream.Close();
-
-                            await using Stream readStream = System.IO.File.OpenRead(destinationFilePath);
-                            await botClient.SendVoiceAsync(
-                                chatId: chat_id,
-                                voice: readStream,
-                                caption: message.Caption == null ? "A voice message for you from anonymous user.\n\nCaption is empty."
-                                                                 : $"A voice message for you from anonymous user.\n\nCaption:{message.Caption}",
-                                replyMarkup: new ReplyKeyboardRemove());
-                            readStream.Close();
-
-                            await botClient.SendTextMessageAsync(
-                                chatId: message.Chat,
-                                text: $"Message was successfully delivered!",
-                                replyMarkup: new ReplyKeyboardRemove());
-
-                            System.IO.File.Delete(destinationFilePath);
-                        }
-
-                        if (message.Type == MessageType.Sticker)
-                        {
-                            var fileId = message.Sticker.FileId;
-                            var fileInfo = await botClient.GetFileAsync(fileId);
-                            var filePath = fileInfo.FilePath;
-
-                            DirectoryInfo dir = Directory.CreateDirectory($"..//netcoreapp3.1//VariousTrash//{message.Chat.Id}");
-
-                            string destinationFilePath = $"{dir}//{fileId}";
-
-                            await using Stream writeStream = System.IO.File.OpenWrite(destinationFilePath);
-                            await botClient.DownloadFileAsync(
-                                filePath: filePath,
-                                destination: writeStream);
-                            writeStream.Close();
-
-                            await using Stream readStream = System.IO.File.OpenRead(destinationFilePath);
-                            await botClient.SendStickerAsync(
-                                chatId: chat_id,
-                                sticker: fileId,
-                                replyMarkup: new ReplyKeyboardRemove());
-                            readStream.Close();
-
-                            await botClient.SendTextMessageAsync(
-                                chatId: message.Chat,
-                                text: $"Message was successfully delivered!",
-                                replyMarkup: new ReplyKeyboardRemove());
-
-                            System.IO.File.Delete(destinationFilePath);
-                        }
-
-                        if (message.Type == MessageType.Video)
-                        {
-                            var fileId = message.Video.FileId;
-                            var fileInfo = await botClient.GetFileAsync(fileId);
-                            var filePath = fileInfo.FilePath;
-
-                            DirectoryInfo dir = Directory.CreateDirectory($"..//netcoreapp3.1//VariousTrash//{message.Chat.Id}");
-
-                            string destinationFilePath = $"{dir}//{message.Video.FileName}";
-
-                            await using Stream writeStream = System.IO.File.OpenWrite(destinationFilePath);
-                            await botClient.DownloadFileAsync(
-                                filePath: filePath,
-                                destination: writeStream);
-                            writeStream.Close();
-
-                            await using Stream readStream = System.IO.File.OpenRead(destinationFilePath);
-                            await botClient.SendVideoAsync(
-                                chatId: chat_id,
-                                video: fileId,
-                                caption: message.Caption == null ? "A video for you from anonymous user.\n\nCaption is empty."
-                                                                 : $"A video for you from anonymous user.\n\nCaption:{message.Caption}",
-                                replyMarkup: new ReplyKeyboardRemove());
-                            readStream.Close();
-
-                            await botClient.SendTextMessageAsync(
-                                chatId: message.Chat,
-                                text: $"Message was successfully delivered!",
-                                replyMarkup: new ReplyKeyboardRemove());
-
-                            System.IO.File.Delete(destinationFilePath);
-                        }
-
+                        await botClient.SendTextMessageAsync(
+                            chatId: message.Chat,
+                            text: $"Message was successfully delivered!",
+                            replyMarkup: new ReplyKeyboardRemove());
                         break;
                     default:
                         break;
@@ -527,59 +522,44 @@ namespace TelegramBot
                                     case "/dice":
                                         Random rnd = new Random();
                                         int randNum = rnd.Next(1, 7);
-                                        
+
                                         switch (randNum)
                                         {
                                             case 1:
-                                                await botClient.SendTextMessageAsync(
-                                                    chatId: message.Chat,
-                                                    text: $"Number rolled: {randNum}");
                                                 await botClient.SendStickerAsync(
-                                                    message.Chat, 
+                                                    message.Chat,
                                                     sticker: "CAACAgIAAxkBAAIEz2OzJXjc3RnGKrFOE_5BPu0gz4-8AALcxgEAAWOLRgyxtRIUSi4a_y0E");
                                                 break;
                                             case 2:
-                                                await botClient.SendTextMessageAsync(
-                                                    chatId: message.Chat,
-                                                    text: $"Number rolled: {randNum}");
                                                 await botClient.SendStickerAsync(
                                                     message.Chat,
                                                     sticker: "CAACAgIAAxkBAAIE0GOzJYBAnry97DeRm1jbw3i8HEOeAALdxgEAAWOLRgzrTyk77CMCUS0E");
                                                 break;
                                             case 3:
-                                                await botClient.SendTextMessageAsync(
-                                                    chatId: message.Chat,
-                                                    text: $"Number rolled: {randNum}");
                                                 await botClient.SendStickerAsync(
                                                     message.Chat,
                                                     sticker: "CAACAgIAAxkBAAIE0WOzJZQ4uxEbX6WyeZM0ih2PFv48AALexgEAAWOLRgxUcf2Fq_sguS0E");
                                                 break;
                                             case 4:
-                                                await botClient.SendTextMessageAsync(
-                                                    chatId: message.Chat,
-                                                    text: $"Number rolled: {randNum}");
                                                 await botClient.SendStickerAsync(
                                                     message.Chat,
                                                     sticker: "CAACAgIAAxkBAAIE0mOzJa7-UnwOy3ZITOqpJYaOP33cAALfxgEAAWOLRgwcRRMg1btjFy0E");
                                                 break;
                                             case 5:
-                                                await botClient.SendTextMessageAsync(
-                                                    chatId: message.Chat,
-                                                    text: $"Number rolled: {randNum}");
                                                 await botClient.SendStickerAsync(
                                                     message.Chat,
                                                     sticker: "CAACAgIAAxkBAAIE02OzJb8Fl8TdvPYb7S1sRB46LLbCAALgxgEAAWOLRgxIsfP6yP8mqS0E");
                                                 break;
                                             case 6:
-                                                await botClient.SendTextMessageAsync(
-                                                    chatId: message.Chat,
-                                                    text: $"Number rolled: {randNum}");
                                                 await botClient.SendStickerAsync(
                                                     message.Chat,
                                                     sticker: "CAACAgIAAxkBAAIE1GOzJeZ3wfH-rxYyF2ZKl6JdlWiuAALhxgEAAWOLRgzvmnzNp7-0ei0E");
                                                 break;
                                         }
 
+                                        await botClient.SendTextMessageAsync(
+                                            chatId: message.Chat,
+                                            text: $"Number rolled: {randNum}");
                                         break;
                                     case "/link":
                                         InlineKeyboardMarkup inlineKeyboard = new InlineKeyboardMarkup(new[]{
@@ -616,10 +596,6 @@ namespace TelegramBot
                                            chatId: message.Chat,
                                            text: "Type the first number, please.",
                                            replyMarkup: CancelKeyboardButton());
-                                        break;
-                                    case "cancel":
-                                        state = "usual";
-                                        await CancelAction(botClient, update, state);
                                         break;
                                     case "witam":
                                         await botClient.SendTextMessageAsync(
