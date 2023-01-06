@@ -4,11 +4,10 @@ internal partial class Logger
 {
     public static void WriteLog(Update update)
     {
-        var message = update.Message;
-
         switch (update.Type)
         {
             case UpdateType.Message:
+                var message = update.Message;
                 switch (message.Type)
                 {
                     case MessageType.Text:
@@ -32,6 +31,9 @@ internal partial class Logger
                     case MessageType.Sticker:
                         Console.WriteLine($"[{DateTime.Now}] User '{message.Chat.FirstName}' (ID: {message.Chat.Id}) has sent the sticker with ID: '{message.Sticker.FileId}'");
                         break;
+                    case MessageType.VideoNote:
+                        Console.WriteLine($"[{DateTime.Now}] User '{message.Chat.FirstName}' (ID: {message.Chat.Id}) has sent a video note with ID: '{message.VideoNote.FileId}'");
+                        break;
                     default:
                         Console.WriteLine($"[{DateTime.Now}] User '{message.Chat.FirstName}' (ID: {message.Chat.Id}) has sent the message with type: '{message.Type}'");
                         break;
@@ -39,10 +41,10 @@ internal partial class Logger
                 break;
             case UpdateType.CallbackQuery:
                 var callbackData = update.CallbackQuery.Data;
-                Console.WriteLine($"[{DateTime.Now}] User '{message.Chat.FirstName}' (ID: {message.Chat.Id}) has pressed the button with ID: '{callbackData}'");
+                Console.WriteLine($"[{DateTime.Now}] User '{update.CallbackQuery.Message.Chat.FirstName}' (ID: {update.CallbackQuery.Message.Chat.Id}) has pressed the button with ID: '{callbackData}'");
                 break;
             default:
-                Console.WriteLine($"[{DateTime.Now}] An update came with following type -> '{update.Type}' from this user: '{message.Chat.FirstName}' (ID: {message.Chat.Id})");
+                Console.WriteLine($"[{DateTime.Now}] An update came with following type -> '{update.Type}' from this user: '{update.Message.Chat.FirstName}' (ID: {update.Message.Chat.Id})");
                 break;
         }
     }
