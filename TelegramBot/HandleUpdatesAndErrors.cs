@@ -328,7 +328,8 @@ internal partial class HandleUpdatesAndErrors
                             SQLStuff.UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{message.Chat.Id}'");
                             await botClient.SendTextMessageAsync(
                                 chatId: message.Chat,
-                                text: "Type the first number, please.");
+                                text: "Type the first number, please.",
+                                replyMarkup: CancelKeyboardButton());
                             break;
                         default:
                             if (message.Text.ToLower() == "cancel")
@@ -337,6 +338,9 @@ internal partial class HandleUpdatesAndErrors
                                 await CancelAction(botClient, update, state);
                                 break;
                             }
+                            await botClient.SendTextMessageAsync(
+                                chatId: message.Chat,
+                                text: "Wrong option!");
                             break;
                     }
                     break;
@@ -349,7 +353,8 @@ internal partial class HandleUpdatesAndErrors
                         SQLStuff.UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{message.Chat.Id}'");
                         await botClient.SendTextMessageAsync(
                             chatId: message.Chat,
-                            text: "Good, now type the second one.");
+                            text: "Good, now type the second one.",
+                            replyMarkup: CancelKeyboardButton());
                     }
                     catch (FormatException)
                     {
