@@ -6,11 +6,9 @@ internal partial class Program
 
     static void Main(string[] args)
     {
-        // Starting receiving updates from Telegram bot
         var botClient = new TelegramBotClient(token);
-        botClient.StartReceiving(HandleUpdatesAndErrors.HandleUpdates, HandleUpdatesAndErrors.HandleErrors);
 
-        Console.WriteLine($"[{DateTime.Now}] Bot {botClient.GetMeAsync().Result.Username} was successfully launched.", Console.ForegroundColor = ConsoleColor.Green);
+        Console.WriteLine($"[{DateTime.Now}] Bot {botClient.GetMeAsync().Result.Username} was successfully launched.", Console.ForegroundColor = ConsoleColor.DarkGreen);
         Console.ResetColor();
 
         var connection = new SQLiteConnection();
@@ -38,10 +36,13 @@ internal partial class Program
 
             connection.Open();
 
-            Console.WriteLine($"[{DateTime.Now}] Successfully connected to SQLite database!", Console.ForegroundColor = ConsoleColor.DarkGreen);
+            Console.WriteLine($"[{DateTime.Now}] Successfully connected to SQLite database!", Console.ForegroundColor = ConsoleColor.Green);
             Console.ResetColor();
 
             connection.Close();
+
+            // Starting receiving updates from Telegram bot
+            botClient.StartReceiving(HandleUpdatesAndErrors.HandleUpdates, HandleUpdatesAndErrors.HandleErrors);
         }
         catch (Exception ex)
         {
