@@ -39,6 +39,18 @@ internal partial class HandleUpdatesAndErrors
         return inlineKeyboard;
     }
 
+    static InlineKeyboardMarkup BackToSettingsInlineKeyboard()
+    {
+        InlineKeyboardMarkup inlineKeyboard = new InlineKeyboardMarkup(new[]
+        {
+            new []
+            {
+                InlineKeyboardButton.WithCallbackData(text: "<< Back to Settings", callbackData: "BackToFilesSettings")
+            }
+        });
+        return inlineKeyboard;
+    }
+
     static ReplyKeyboardMarkup MathOperationButtons()
     {
         ReplyKeyboardMarkup replyKeyboard = new ReplyKeyboardMarkup(new[]
@@ -303,8 +315,8 @@ internal partial class HandleUpdatesAndErrors
             default:
                 await botClient.SendTextMessageAsync(
                     chatId: update.Message.Chat.Id,
-                    text: "This type of message isn't supported. Try the supported one, please.",
-                    replyMarkup: new ReplyKeyboardRemove());
+                    text: "This type of message isn't supported. Try the supported one next time, please.",
+                    replyMarkup: state == "InConversation" ? null : new ReplyKeyboardRemove());
                 break;
         }
     }
@@ -316,6 +328,10 @@ internal partial class HandleUpdatesAndErrors
         switch (state)
         {
             case "choosing_option":
+                if (update.Type != UpdateType.Message)
+                {
+                    return;
+                }
                 switch (update.Message.Text.ToLower())
                 {
                     case "addition":
@@ -347,6 +363,10 @@ internal partial class HandleUpdatesAndErrors
             case "typefirstnum":
                 try
                 {
+                    if (update.Type != UpdateType.Message)
+                    {
+                        return;
+                    }
                     state = "typesecondnum";
                     double result = Convert.ToDouble(update.Message.Text);
                     first_num = result;
@@ -373,6 +393,11 @@ internal partial class HandleUpdatesAndErrors
             case "typesecondnum":
                 try
                 {
+                    if (update.Type != UpdateType.Message)
+                    {
+                        return;
+                    }
+
                     double result = Convert.ToDouble(update.Message.Text);
                     second_num = result;
 
@@ -457,11 +482,161 @@ internal partial class HandleUpdatesAndErrors
                     return;
                 }
                 break;
+            case "sending_file_for_upload":
+                state = "usual";
+
+                if (update.Type != UpdateType.Message)
+                {
+                    return;
+                }
+
+                if (update.Message.Text != null)
+                {
+                    if (update.Message.Text.ToLower() == "cancel")
+                    {
+                        await CancelAction(botClient, update, state);
+                        return;
+                    }
+
+                    if (update.Message.Type == MessageType.Text)
+                    {
+                        await botClient.SendTextMessageAsync(
+                            chatId: update.Message.Chat,
+                            text: "Send a file, not a text message!");
+                        return;
+                    }
+                }
+
+                SQLStuff.UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{update.Message.Chat.Id}'");
+
+                await DownloadFile(botClient, update);
+                await botClient.SendTextMessageAsync(
+                    chatId: update.Message.Chat,
+                    text: "Your file was successfully uploaded!",
+                    replyMarkup: new ReplyKeyboardRemove());
+                break;
+            case "choosing_file_for_download":
+                state = "usual";
+
+                if (update.Type != UpdateType.Message)
+                {
+                    return;
+                }
+
+                try
+                {
+                    if (update.Message.Text != null)
+                    {
+                        if (update.Message.Text.ToLower() == "cancel")
+                        {
+                            await CancelAction(botClient, update, state);
+                            return;
+                        }
+
+                        string path = $"..//net6.0//VariousTrash//{update.Message.Chat.Id}";
+                        Dictionary<int, string> filesList = new Dictionary<int, string>();
+                        string[] files = Directory.GetFiles(path);
+
+                        for (int i = 0; i < files.Length; i++)
+                        {
+                            filesList.Add(i + 1, files[i]);
+                        }
+
+                        int seqID = Convert.ToInt32(update.Message.Text);
+
+                        if (seqID < 1 || seqID > filesList.Count) 
+                        {
+                            await botClient.SendTextMessageAsync(
+                                chatId: update.Message.Chat,
+                                text: "You typed an invalid sequence number!");
+                        }
+
+                        string value = "", fileName = filesList.TryGetValue(seqID, out value) ? fileName = value : "";
+
+                        SQLStuff.UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{update.Message.Chat.Id}'");
+
+                        await using (Stream readStream = System.IO.File.OpenRead(fileName))
+                        {
+                            await botClient.SendDocumentAsync(
+                                chatId: update.Message.Chat,
+                                document: new InputOnlineFile(readStream, fileName.Substring(fileName.IndexOf("\\") + 1)),
+                                caption: "Here's your file, grab it!",
+                                replyMarkup: new ReplyKeyboardRemove());
+                        }
+                    }
+                } catch
+                {
+                    await botClient.SendTextMessageAsync(
+                        chatId: update.Message.Chat,
+                        text: "You didn't type a sequence number!");
+                    return;
+                }
+                break;
+            case "choosing_file_for_delete":
+                try
+                {
+                    state = "usual";
+                    if (update.Type != UpdateType.Message)
+                    {
+                        return;
+                    }
+
+                    if (update.Message.Text != null)
+                    {
+                        if (update.Message.Text.ToLower() == "cancel")
+                        {
+                            await CancelAction(botClient, update, state);
+                            return;
+                        }
+
+                        string path = $"..//net6.0//VariousTrash//{update.Message.Chat.Id}";
+                        Dictionary<int, string> filesList = new Dictionary<int, string>();
+                        string[] files = Directory.GetFiles(path);
+
+                        for (int i = 0; i < files.Length; i++)
+                        {
+                            filesList.Add(i + 1, files[i]);
+                        }
+
+                        int seqID = Convert.ToInt32(update.Message.Text);
+
+                        if (seqID < 1 || seqID > filesList.Count)
+                        {
+                            await botClient.SendTextMessageAsync(
+                                chatId: update.Message.Chat,
+                                text: "You typed an invalid sequence number!");
+                        }
+
+                        string value = "", fileName = filesList.TryGetValue(seqID, out value) ? fileName = value : "";
+
+                        System.IO.File.Delete(fileName);
+
+                        SQLStuff.UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{update.Message.Chat.Id}'");
+
+                        await botClient.SendTextMessageAsync(
+                            chatId: update.Message.Chat.Id,
+                            text: "File was successfully deleted!",
+                            replyMarkup: new ReplyKeyboardRemove());
+                    }
+                }
+                catch
+                {
+                    await botClient.SendTextMessageAsync(
+                        chatId: update.Message.Chat,
+                        text: "You didn't type a sequence number!");
+                    return;
+                }
+                break;
             case "waiting_for_userID":
                 state = "waiting_a_message";
 
                 try
                 {
+                    if (update.Type != UpdateType.Message)
+                    {
+                        return;
+                    }
+
                     int id = Convert.ToInt32(update.Message.Text);
                     string companion_chat_id = SQLStuff.ReadDBRecords($"SELECT chatID FROM users_list WHERE id='{id}'");
 
@@ -480,8 +655,8 @@ internal partial class HandleUpdatesAndErrors
 
                     await botClient.SendTextMessageAsync(
                         chatId: update.Message.Chat,
-                        text: $"OK, you chose this user: <em>{username}</em>.\nNow enter the message text you want to send to the user " +
-                        $"(you're able to send: photos, stickers, documents, text and voice messages):",
+                        text: $"OK, you chose this user: <em>{username}</em>.\nNow send me the message that you want to send to the user " +
+                        $"(you're able to send: audios, videos, photos, stickers, documents, text, voice notes and voice messages):",
                         parseMode: ParseMode.Html);
                 }
                 catch (FormatException)
@@ -502,9 +677,13 @@ internal partial class HandleUpdatesAndErrors
 
                 state = "usual";
 
-                if (update.Message.Text.ToLower() == "cancel")
+                if (update.Type != UpdateType.Message)
                 {
-                    state = "usual";
+                    return;
+                }
+
+                if (update.Message.Type == MessageType.Text && update.Message.Text.ToLower() == "cancel")
+                {
                     await CancelAction(botClient, update, state);
                     break;
                 }
@@ -581,6 +760,11 @@ internal partial class HandleUpdatesAndErrors
                 }
                 break;
             case "choosing_yes_or_no":
+                if (update.Type != UpdateType.Message)
+                {
+                    return;
+                }
+
                 switch (update.Message.Text.ToLower())
                 {
                     case "yes":
@@ -641,6 +825,11 @@ internal partial class HandleUpdatesAndErrors
                 }
                 break;
             case "waiting_for_response":
+                if (update.Type != UpdateType.Message)
+                {
+                    return;
+                }
+
                 if (update.Message.Text.ToLower() == "cancel")
                 {
                     state = "usual";
@@ -669,33 +858,43 @@ internal partial class HandleUpdatesAndErrors
                 string companion_ChatID = SQLStuff.ReadDBRecords($"SELECT chatID FROM users_list WHERE id='{companion_ID}'");
                 string user_Name = SQLStuff.ReadDBRecords($"SELECT username FROM users_list WHERE id='{offerer_ID}'");
 
-                switch (update.Message.Type)
+                switch (update.Type)
                 {
-                    case MessageType.Text:
-                        if (update.Message.Text.ToLower() == "stop")
+                    case UpdateType.Message:
+                        switch (update.Message.Type)
                         {
-                            state = "usual";
+                            case MessageType.Text:
+                                if (update.Message != null)
+                                {
+                                    if (update.Message.Text.ToLower() == "stop")
+                                    {
+                                        state = "usual";
 
-                            SQLStuff.UpdateDB($"UPDATE users_list SET messaging_with=NULL WHERE id='{companion_ID}'");
-                            SQLStuff.UpdateDB($"UPDATE users_list SET messaging_with=NULL WHERE chatID='{update.Message.Chat.Id}'");
-                            SQLStuff.UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{update.Message.Chat.Id}'");
-                            SQLStuff.UpdateDB($"UPDATE users_list SET state='{state}' WHERE id='{companion_ID}'");
+                                        SQLStuff.UpdateDB($"UPDATE users_list SET messaging_with=NULL WHERE id='{companion_ID}'");
+                                        SQLStuff.UpdateDB($"UPDATE users_list SET messaging_with=NULL WHERE chatID='{update.Message.Chat.Id}'");
+                                        SQLStuff.UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{update.Message.Chat.Id}'");
+                                        SQLStuff.UpdateDB($"UPDATE users_list SET state='{state}' WHERE id='{companion_ID}'");
 
-                            await botClient.SendTextMessageAsync(
-                                chatId: companion_ChatID,
-                                text: $"<b>{user_Name}</b> has left from the conversation. Have a pleasant day!",
-                                parseMode: ParseMode.Html,
-                                replyMarkup: new ReplyKeyboardRemove());
-                            await botClient.SendTextMessageAsync(
-                                chatId: update.Message.Chat,
-                                text: "You left from the conversation!",
-                                replyMarkup: new ReplyKeyboardRemove());
-                            break;
+                                        await botClient.SendTextMessageAsync(
+                                            chatId: companion_ChatID,
+                                            text: $"<b>{user_Name}</b> has left from the conversation. Have a pleasant day!",
+                                            parseMode: ParseMode.Html,
+                                            replyMarkup: new ReplyKeyboardRemove());
+                                        await botClient.SendTextMessageAsync(
+                                            chatId: update.Message.Chat,
+                                            text: "You left from the conversation!",
+                                            replyMarkup: new ReplyKeyboardRemove());
+                                        break;
+                                    }
+                                }
+                                await SendSpecificMessage(botClient, update, companion_ChatID, state);
+                                break;
+                            default:
+                                await SendSpecificMessage(botClient, update, companion_ChatID, state);
+                                break;
                         }
-                        await SendSpecificMessage(botClient, update, companion_ChatID, state);
                         break;
                     default:
-                        await SendSpecificMessage(botClient, update, companion_ChatID, state);
                         break;
                 }
                 break;
@@ -750,7 +949,7 @@ internal partial class HandleUpdatesAndErrors
 
                                     await botClient.SendTextMessageAsync(
                                         chatId: update.Message.Chat,
-                                        text: "Unfortunately, there are no users to whom you can send a message :(",
+                                        text: "Unfortunately, there are no users to whom you can send a message \U0001F626",
                                         replyMarkup: new ReplyKeyboardRemove());
                                 }
                                 break;
@@ -854,7 +1053,7 @@ internal partial class HandleUpdatesAndErrors
 
                                     await botClient.SendTextMessageAsync(
                                         chatId: update.Message.Chat,
-                                        text: "Unfortunately, there are no users to whom you can send a message :(",
+                                        text: "Unfortunately, there are no users with whom you can start a conversation \U0001F626.",
                                         replyMarkup: new ReplyKeyboardRemove());
                                 }
                                 break;
@@ -878,30 +1077,145 @@ internal partial class HandleUpdatesAndErrors
                 var pressedButtonData = update.CallbackQuery.Data;
                 switch (pressedButtonData)
                 {
+                    case "BackToFilesSettings":
+                        await BackToSettings(botClient, update);
+                        break;
                     case "SeeFilesList":
-                        await botClient.SendTextMessageAsync(
+                        string result = GetFilesList(update);
+                        if (result == "NoFiles")
+                        {
+                            await botClient.EditMessageTextAsync(
+                                chatId: update.CallbackQuery.Message.Chat,
+                                messageId: update.CallbackQuery.Message.MessageId,
+                                text: "Unfortunately, your list of files is empty \U0001F626.",
+                                replyMarkup: BackToSettingsInlineKeyboard(),
+                                parseMode: ParseMode.Html);
+                            return;
+                        }
+
+                        await botClient.EditMessageTextAsync(
                             chatId: update.CallbackQuery.Message.Chat,
-                            text: "Working on this function...");
+                            messageId: update.CallbackQuery.Message.MessageId,
+                            text: result,
+                            replyMarkup: BackToSettingsInlineKeyboard(),
+                            parseMode: ParseMode.Html);
                         break;
                     case "UploadFile":
+                        state = "sending_file_for_upload";
+
+                        SQLStuff.UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{update.CallbackQuery.Message.Chat.Id}'");
+
                         await botClient.SendTextMessageAsync(
                             chatId: update.CallbackQuery.Message.Chat,
-                            text: "Working on this function...");
+                            text: "Send me the file you want to upload to the server, please.",
+                            replyMarkup: CancelKeyboardButton());
                         break;
                     case "DownloadFile":
+                        result = GetFilesList(update);
+                        state = "choosing_file_for_download";
+                        if (result == "NoFiles")
+                        {
+                            await botClient.EditMessageTextAsync(
+                                chatId: update.CallbackQuery.Message.Chat,
+                                messageId: update.CallbackQuery.Message.MessageId,
+                                text: "Unfortunately, your list of files is empty \U0001F626.",
+                                replyMarkup: BackToSettingsInlineKeyboard(),
+                                parseMode: ParseMode.Html);
+                            return;
+                        }
+
+                        await botClient.EditMessageTextAsync(
+                            chatId: update.CallbackQuery.Message.Chat,
+                            messageId: update.CallbackQuery.Message.MessageId,
+                            text: result,
+                            replyMarkup: BackToSettingsInlineKeyboard(),
+                            parseMode: ParseMode.Html);
+
+                        SQLStuff.UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{update.CallbackQuery.Message.Chat.Id}'");
+
                         await botClient.SendTextMessageAsync(
                             chatId: update.CallbackQuery.Message.Chat,
-                            text: "Working on this function...");
+                            text: "Enter the sequence number of the file you want to download, please.",
+                            replyMarkup: CancelKeyboardButton());
                         break;
                     case "DeleteFile":
+                        state = "choosing_file_for_delete";
+                        result = GetFilesList(update);
+                        if (result == "NoFiles")
+                        {
+                            await botClient.EditMessageTextAsync(
+                                chatId: update.CallbackQuery.Message.Chat,
+                                messageId: update.CallbackQuery.Message.MessageId,
+                                text: "Unfortunately, your list of files is empty \U0001F626.",
+                                replyMarkup: BackToSettingsInlineKeyboard(),
+                                parseMode: ParseMode.Html);
+                            return;
+                        }
+
+                        SQLStuff.UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{update.CallbackQuery.Message.Chat.Id}'");
+
+                        await botClient.EditMessageTextAsync(
+                            chatId: update.CallbackQuery.Message.Chat,
+                            messageId: update.CallbackQuery.Message.MessageId,
+                            text: result,
+                            replyMarkup: BackToSettingsInlineKeyboard(),
+                            parseMode: ParseMode.Html);
                         await botClient.SendTextMessageAsync(
                             chatId: update.CallbackQuery.Message.Chat,
-                            text: "Working on this function...");
+                            text: "Enter the sequence number of the file you want to delete, please.",
+                            replyMarkup: CancelKeyboardButton());
                         break;
                     default:
                         break;
                 }
                 break;
+        }
+    }
+
+    static async Task BackToSettings(ITelegramBotClient botClient, Update update)
+    {
+        await botClient.EditMessageTextAsync(
+            chatId: update.CallbackQuery.Message.Chat,
+            messageId: update.CallbackQuery.Message.MessageId,
+            text: "Choose one of the options below that you want to use with your files \U00002B07",
+            replyMarkup: OptionsWithFilesInlineKeyboard());
+    }
+
+    static string GetFilesList(Update update)
+    {
+        Dictionary<int, string> filesList = new Dictionary<int, string>();
+        string path = $"..//net6.0//VariousTrash//{update.CallbackQuery.Message.Chat.Id}";
+        string[] files = Directory.GetFiles(path);
+        string messageText = "Here are a list of your files:\n\n";
+
+        if (files.Length != 0)
+        {
+            for (int i = 0; i < files.Length; i++)
+            {
+                filesList.Add(i + 1, files[i]);
+                messageText += $"<b>{i + 1}. {files[i].Substring(files[i].IndexOf("\\") + 1)}</b>\n";
+            }
+            return messageText;
+        }
+
+        return "NoFiles";
+    }
+
+    static async Task DownloadFile(ITelegramBotClient botClient, Update update)
+    {
+        var fileId = update.Message.Document.FileId;
+        var fileInfo = await botClient.GetFileAsync(fileId);
+        var filePath = fileInfo.FilePath;
+
+        DirectoryInfo dir = Directory.CreateDirectory($"..//net6.0//VariousTrash//{update.Message.Chat.Id}");
+
+        string destinationFilePath = $"{dir}//{update.Message.Document.FileName}";
+
+        await using (Stream fileStream = System.IO.File.OpenWrite(destinationFilePath))
+        {
+            await botClient.DownloadFileAsync(
+                filePath: filePath,
+                destination: fileStream);
         }
     }
     #endregion
