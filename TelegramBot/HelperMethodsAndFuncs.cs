@@ -323,6 +323,7 @@ internal partial class HelperMethodsAndFuncs
     #endregion
 
     #region Methods and functions related with files
+    // Checking if user's files list is empty or not
     static string CheckFilesList(Update update)
     {
         Dictionary<int, string> filesList = new Dictionary<int, string>();
@@ -343,10 +344,11 @@ internal partial class HelperMethodsAndFuncs
         return "NoFiles";
     }
 
+    // Fetching list of user's files
     static Dictionary<int, string> GetFilesList(Update update)
     {
         Dictionary<int, string> filesList = new Dictionary<int, string>();
-        string path = $"..//net6.0//VariousTrash//{update.CallbackQuery.Message.Chat.Id}";
+        string path = $"..//net6.0//VariousTrash//{update.Message.Chat.Id}";
         string[] files = Directory.GetFiles(path);
 
         if (files.Length != 0)
@@ -361,6 +363,7 @@ internal partial class HelperMethodsAndFuncs
         return null;
     }
 
+    // In order to user can upload files to his own storage
     static async Task DownloadFile(string fileId, ITelegramBotClient botClient, Update update)
     {
         var fileInfo = await botClient.GetFileAsync(fileId);
@@ -378,6 +381,7 @@ internal partial class HelperMethodsAndFuncs
         }
     }
 
+    // Processing uploading and downloading files
     static async Task ForUploadingAndDeletingFiles(ITelegramBotClient botClient, Update update, string state)
     {
         Dictionary<int, string> filesList = GetFilesList(update);
