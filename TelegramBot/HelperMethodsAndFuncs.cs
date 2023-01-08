@@ -1,7 +1,4 @@
-﻿using System.Security.Cryptography;
-using Telegram.Bot.Types;
-
-namespace TelegramBot;
+﻿namespace TelegramBot;
 
 internal partial class HelperMethodsAndFuncs
 {
