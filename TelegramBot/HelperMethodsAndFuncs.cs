@@ -135,182 +135,91 @@ internal partial class HelperMethodsAndFuncs
                 break;
             case MessageType.Document:
                 var fileId = update.Message.Document.FileId;
-                var fileInfo = await botClient.GetFileAsync(fileId);
-                var filePath = fileInfo.FilePath;
 
-                DirectoryInfo dir = Directory.CreateDirectory($"..//net6.0//VariousTrash//{update.Message.Chat.Id}");
-
-                string destinationFilePath = $"{dir}//{update.Message.Document.FileName}";
-
-                await using (Stream fileStream = System.IO.File.OpenWrite(destinationFilePath))
-                {
-                    await botClient.DownloadFileAsync(
-                        filePath: filePath,
-                        destination: fileStream);
-                }
+                await DownloadFile(fileId, botClient, update, state);
 
                 await botClient.SendDocumentAsync(
                     chatId: chat_id,
                     document: fileId,
                     caption: state == "InConversation" ? update.Message.Text : $"A document for you from anonymous user.\n\n{(update.Message.Caption == null ? "A caption is empty" : update.Message.Caption)}",
                     replyMarkup: new ReplyKeyboardRemove());
-
-                System.IO.File.Delete(destinationFilePath);
                 break;
             case MessageType.Photo:
                 fileId = update.Message.Photo.Last().FileId;
-                fileInfo = await botClient.GetFileAsync(fileId);
-                filePath = fileInfo.FilePath;
 
-                dir = Directory.CreateDirectory($"..//net6.0//VariousTrash//{update.Message.Chat.Id}");
-
-                destinationFilePath = $"{dir}//{fileId}";
-
-                await using (Stream fileStream = System.IO.File.OpenWrite(destinationFilePath))
-                {
-                    await botClient.DownloadFileAsync(
-                        filePath: filePath,
-                        destination: fileStream);
-                }
+                await DownloadFile(fileId, botClient, update, state);
 
                 await botClient.SendPhotoAsync(
                     chatId: chat_id,
                     photo: fileId,
                     caption: state == "InConversation" ? update.Message.Text : $"A picture (or photo) for you from anonymous user.\n\n{(update.Message.Caption == null ? "A caption is empty" : update.Message.Caption)}",
                     replyMarkup: new ReplyKeyboardRemove());
-
-                System.IO.File.Delete(destinationFilePath);
                 break;
             case MessageType.Audio:
                 fileId = update.Message.Audio.FileId;
-                fileInfo = await botClient.GetFileAsync(fileId);
-                filePath = fileInfo.FilePath;
 
-                dir = Directory.CreateDirectory($"..//net6.0//VariousTrash//{update.Message.Chat.Id}");
-
-                destinationFilePath = $"{dir}//{update.Message.Audio.FileName}";
-
-                await using (Stream fileStream = System.IO.File.OpenWrite(destinationFilePath))
-                {
-                    await botClient.DownloadFileAsync(
-                        filePath: filePath,
-                        destination: fileStream);
-                }
+                await DownloadFile(fileId, botClient, update, state);
 
                 await botClient.SendAudioAsync(
                     chatId: chat_id,
                     audio: fileId,
                     caption: state == "InConversation" ? update.Message.Text : $"An audio for you from anonymous user.\n\n{(update.Message.Caption == null ? "A caption is empty" : update.Message.Caption)}",
                     replyMarkup: new ReplyKeyboardRemove());
-
-                System.IO.File.Delete(destinationFilePath);
                 break;
             case MessageType.Voice:
                 fileId = update.Message.Voice.FileId;
-                fileInfo = await botClient.GetFileAsync(fileId);
-                filePath = fileInfo.FilePath;
 
-                dir = Directory.CreateDirectory($"..//net6.0//VariousTrash//{update.Message.Chat.Id}");
+                await DownloadFile(fileId, botClient, update, state);
 
-                destinationFilePath = $"{dir}//{fileId}";
 
-                await using (Stream fileStream = System.IO.File.OpenWrite(destinationFilePath))
-                {
-                    await botClient.DownloadFileAsync(
-                        filePath: filePath,
-                        destination: fileStream);
-                }
+                await botClient.SendVoiceAsync(
+                    chatId: chat_id,
+                    voice: fileId,
+                    caption: state == "InConversation" ? update.Message.Text : $"A voice message for you from anonymous user.\n\n{(update.Message.Caption == null ? "A caption is empty" : update.Message.Caption)}",
+                    replyMarkup: new ReplyKeyboardRemove());
 
-                await using (Stream readStream = System.IO.File.OpenRead(destinationFilePath))
-                {
-                    await botClient.SendVoiceAsync(
-                        chatId: chat_id,
-                        voice: readStream,
-                        caption: state == "InConversation" ? update.Message.Text : $"A voice message for you from anonymous user.\n\n{(update.Message.Caption == null ? "A caption is empty" : update.Message.Caption)}",
-                        replyMarkup: new ReplyKeyboardRemove());
-                }
-
-                System.IO.File.Delete(destinationFilePath);
                 break;
             case MessageType.Sticker:
                 fileId = update.Message.Sticker.FileId;
-                fileInfo = await botClient.GetFileAsync(fileId);
-                filePath = fileInfo.FilePath;
 
-                dir = Directory.CreateDirectory($"..//net6.0//VariousTrash//{update.Message.Chat.Id}");
+                await DownloadFile(fileId, botClient, update, state);
 
-                destinationFilePath = $"{dir}//{fileInfo.FilePath.Substring(fileInfo.FilePath.IndexOf("/") + 1)}";
-
-                await using (Stream fileStream = System.IO.File.OpenWrite(destinationFilePath))
-                {
-                    await botClient.DownloadFileAsync(
-                        filePath: filePath,
-                        destination: fileStream);
-                }
-
-                await using (Stream readStream = System.IO.File.OpenRead(destinationFilePath))
-                {
-                    await botClient.SendStickerAsync(
-                        chatId: chat_id,
-                        sticker: fileId,
-                        replyMarkup: new ReplyKeyboardRemove());
-                }
-
-                System.IO.File.Delete(destinationFilePath);
+                await botClient.SendStickerAsync(
+                    chatId: chat_id,
+                    sticker: fileId,
+                    replyMarkup: new ReplyKeyboardRemove());
                 break;
             case MessageType.Video:
                 fileId = update.Message.Video.FileId;
-                fileInfo = await botClient.GetFileAsync(fileId);
-                filePath = fileInfo.FilePath;
 
-                dir = Directory.CreateDirectory($"..//net6.0//VariousTrash//{update.Message.Chat.Id}");
+                await DownloadFile(fileId, botClient, update, state);
 
-                destinationFilePath = $"{dir}//{update.Message.Video.FileName}";
-
-                await using (Stream fileStream = System.IO.File.OpenWrite(destinationFilePath))
-                {
-                    await botClient.DownloadFileAsync(
-                        filePath: filePath,
-                        destination: fileStream);
-                }
-
-                await using (Stream readStream = System.IO.File.OpenRead(destinationFilePath))
-                {
-                    await botClient.SendVideoAsync(
-                        chatId: chat_id,
-                        video: fileId,
-                        caption: state == "InConversation" ? update.Message.Text : $"A video for you from anonymous user.\n\n{(update.Message.Caption == null ? "A caption is empty" : update.Message.Caption)}",
-                        replyMarkup: new ReplyKeyboardRemove());
-                }
-
-                System.IO.File.Delete(destinationFilePath);
+                await botClient.SendVideoAsync(
+                    chatId: chat_id,
+                    video: fileId,
+                    caption: state == "InConversation" ? update.Message.Text : $"A video for you from anonymous user.\n\n{(update.Message.Caption == null ? "A caption is empty" : update.Message.Caption)}",
+                    replyMarkup: new ReplyKeyboardRemove());
                 break;
             case MessageType.VideoNote:
                 fileId = update.Message.VideoNote.FileId;
-                fileInfo = await botClient.GetFileAsync(fileId);
-                filePath = fileInfo.FilePath;
 
-                dir = Directory.CreateDirectory($"..//net6.0//VariousTrash//{update.Message.Chat.Id}");
+                await DownloadFile(fileId, botClient, update, state);
 
-                destinationFilePath = $"{dir}//{fileInfo.FilePath.Substring(fileInfo.FilePath.IndexOf("/") + 1)}";
+                await botClient.SendVideoNoteAsync(
+                    chatId: chat_id,
+                    videoNote: fileId,
+                    duration: update.Message.VideoNote.Duration,
+                    replyMarkup: new ReplyKeyboardRemove());
+                break;
+            case MessageType.Location:
+                double[] location = new double[2];
+                location[0] = update.Message.Location.Latitude;
+                location[1] = update.Message.Location.Longitude;
 
-                await using (Stream fileStream = System.IO.File.OpenWrite(destinationFilePath))
-                {
-                    await botClient.DownloadFileAsync(
-                        filePath: filePath,
-                        destination: fileStream);
-                }
-
-                await using (Stream readStream = System.IO.File.OpenRead(destinationFilePath))
-                {
-                    await botClient.SendVideoNoteAsync(
-                        chatId: chat_id,
-                        videoNote: fileId,
-                        duration: update.Message.VideoNote.Duration,
-                        replyMarkup: new ReplyKeyboardRemove());
-                }
-
-                System.IO.File.Delete(destinationFilePath);
+                await botClient.SendLocationAsync(
+                    chatId: chat_id,
+                    latitude: location[0],
+                    longitude: location[1]);
                 break;
             default:
                 await botClient.SendTextMessageAsync(
@@ -345,10 +254,9 @@ internal partial class HelperMethodsAndFuncs
     }
 
     // Fetching list of user's files
-    static Dictionary<int, string> GetFilesList(Update update)
+    static Dictionary<int, string> GetFilesList(string path)
     {
         Dictionary<int, string> filesList = new Dictionary<int, string>();
-        string path = $"..//net6.0//VariousTrash//{update.Message.Chat.Id}";
         string[] files = Directory.GetFiles(path);
 
         if (files.Length != 0)
@@ -364,14 +272,14 @@ internal partial class HelperMethodsAndFuncs
     }
 
     // In order to user can upload files to his own storage
-    static async Task DownloadFile(string fileId, ITelegramBotClient botClient, Update update)
+    static async Task DownloadFile(string fileId, ITelegramBotClient botClient, Update update, string state = "")
     {
         var fileInfo = await botClient.GetFileAsync(fileId);
         var filePath = fileInfo.FilePath;
 
         DirectoryInfo dir = Directory.CreateDirectory($"..//net6.0//VariousTrash//{update.Message.Chat.Id}");
 
-        string destinationFilePath = $"{dir}//{update.Message.Document.FileName}";
+        string destinationFilePath = $"{dir}//{filePath.IndexOf("/") + 1}";
 
         await using (Stream fileStream = System.IO.File.OpenWrite(destinationFilePath))
         {
@@ -379,12 +287,17 @@ internal partial class HelperMethodsAndFuncs
                 filePath: filePath,
                 destination: fileStream);
         }
+
+        if (state == "InConversation" || state == "usual")
+        {
+            System.IO.File.Delete(destinationFilePath);
+        }
     }
 
     // Processing uploading and downloading files
-    static async Task ForUploadingAndDeletingFiles(ITelegramBotClient botClient, Update update, string state)
+    static async Task ForDownloadingAndDeletingFiles(ITelegramBotClient botClient, Update update, string state, string path)
     {
-        Dictionary<int, string> filesList = GetFilesList(update);
+        Dictionary<int, string> filesList = GetFilesList(path);
 
         int seqID = Convert.ToInt32(update.Message.Text);
 
@@ -546,6 +459,7 @@ internal partial class HelperMethodsAndFuncs
 
     public static async Task ProcessingStates(string state, ITelegramBotClient botClient, Update update)
     {
+        string path = $"..//net6.0//VariousTrash//{update.Message.Chat.Id}";
         switch (state)
         {
             case "choosing_option":
@@ -629,7 +543,7 @@ internal partial class HelperMethodsAndFuncs
                             SQLStuff.UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{update.Message.Chat.Id}'");
                             await botClient.SendTextMessageAsync(
                                 chatId: update.Message.Chat,
-                                text: $"Great, result is: <em>{first_num} + {second_num} = {first_num + second_num}</em>",
+                                text: $"Great, the result is: <em>{first_num} + {second_num} = {first_num + second_num}</em>",
                                 parseMode: ParseMode.Html,
                                 replyMarkup: new ReplyKeyboardRemove());
                             break;
@@ -638,7 +552,7 @@ internal partial class HelperMethodsAndFuncs
                             SQLStuff.UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{update.Message.Chat.Id}'");
                             await botClient.SendTextMessageAsync(
                                 chatId: update.Message.Chat,
-                                text: $"Great, result is: <em>{first_num} - {second_num} = {first_num - second_num}</em>",
+                                text: $"Great, the result is: <em>{first_num} - {second_num} = {first_num - second_num}</em>",
                                 parseMode: ParseMode.Html,
                                 replyMarkup: new ReplyKeyboardRemove());
                             break;
@@ -647,7 +561,7 @@ internal partial class HelperMethodsAndFuncs
                             SQLStuff.UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{update.Message.Chat.Id}'");
                             await botClient.SendTextMessageAsync(
                                 chatId: update.Message.Chat,
-                                text: $"Great, result is: <em>{first_num} * {second_num} = {first_num * second_num}</em>",
+                                text: $"Great, the result is: <em>{first_num} * {second_num} = {first_num * second_num}</em>",
                                 parseMode: ParseMode.Html,
                                 replyMarkup: new ReplyKeyboardRemove());
                             break;
@@ -664,7 +578,7 @@ internal partial class HelperMethodsAndFuncs
                                 SQLStuff.UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{update.Message.Chat.Id}'");
                                 await botClient.SendTextMessageAsync(
                                     chatId: update.Message.Chat,
-                                    text: $"Great, result is: <em>{first_num} / {second_num} = {first_num / second_num}</em>",
+                                    text: $"Great, the result is: <em>{first_num} / {second_num} = {first_num / second_num}</em>",
                                     parseMode: ParseMode.Html,
                                     replyMarkup: new ReplyKeyboardRemove());
                             }
@@ -751,8 +665,8 @@ internal partial class HelperMethodsAndFuncs
                             await CancelAction(botClient, update, state);
                             return;
                         }
-
-                        await ForUploadingAndDeletingFiles(botClient, update, state);
+                        
+                        await ForDownloadingAndDeletingFiles(botClient, update, state, path);
                     }
                 }
                 catch (FormatException)
@@ -780,7 +694,7 @@ internal partial class HelperMethodsAndFuncs
                             return;
                         }
 
-                        await ForUploadingAndDeletingFiles(botClient, update, state);
+                        await ForDownloadingAndDeletingFiles(botClient, update, state, path);
                     }
                 }
                 catch (FormatException)
@@ -820,7 +734,7 @@ internal partial class HelperMethodsAndFuncs
                     await botClient.SendTextMessageAsync(
                         chatId: update.Message.Chat,
                         text: $"OK, you chose this user: <em>{username}</em>.\nNow send me the message that you want to send to the user " +
-                        $"(you're able to send: audios, videos, photos, stickers, documents, text, voice notes and voice messages):",
+                        $"(you're able to send: your location, audios, videos, photos, stickers, documents, text, voice notes and voice messages):",
                         parseMode: ParseMode.Html);
                 }
                 catch (FormatException)
@@ -993,6 +907,7 @@ internal partial class HelperMethodsAndFuncs
 
     public static async Task ProcessingMessages(ITelegramBotClient botClient, Update update, string state)
     {
+        Random rnd = new Random();
         if (state == "usual")
         {
             switch (update.Type)
@@ -1039,7 +954,7 @@ internal partial class HelperMethodsAndFuncs
 
                                         await botClient.SendTextMessageAsync(
                                             chatId: update.Message.Chat,
-                                            text: "Unfortunately, there are no users to whom you can send a message \U0001F626",
+                                            text: "Unfortunately, there are no users to whom you can send a message \U0001F641",
                                             replyMarkup: new ReplyKeyboardRemove());
                                     }
                                     break;
@@ -1052,7 +967,6 @@ internal partial class HelperMethodsAndFuncs
                                         replyMarkup: MathOperationButtons());
                                     break;
                                 case "/dice":
-                                    Random rnd = new Random();
                                     int randNum = rnd.Next(1, 7);
 
                                     switch (randNum)
@@ -1106,10 +1020,24 @@ internal partial class HelperMethodsAndFuncs
                                         replyMarkup: LinksInlineKeyboard());
                                     break;
                                 case "/pic":
+                                    string path = $"..//net6.0//VariousTrash//Pictures";
+                                    Dictionary<int, string> picturesList = GetFilesList(path);
+                                    
+                                    if (picturesList.Count == 0)
+                                    {
+                                        await botClient.SendTextMessageAsync(
+                                            chatId: update.Message.Chat,
+                                            text: "No pictures today, sorry \U0001F641");
+                                        return;
+                                    }
+
+                                    int randPic = rnd.Next(1, picturesList.Count + 1);
+                                    string value = "", picName = picturesList.TryGetValue(randPic, out value) ? value : "";
+
                                     await botClient.SendPhotoAsync(
                                         chatId: update.Message.Chat,
-                                        photo: "https://media.discordapp.net/attachments/748112995606986803/1059547380132876328/durka.png",
-                                        caption: "<b>Durka, ebat'</b>",
+                                        photo: picName.Substring(picName.IndexOf("\\") + 1),
+                                        caption: "<b>Here is your picture, enjoy it :)</b>",
                                         parseMode: ParseMode.Html);
                                     break;
                                 case "/startconv":
@@ -1143,7 +1071,7 @@ internal partial class HelperMethodsAndFuncs
 
                                         await botClient.SendTextMessageAsync(
                                             chatId: update.Message.Chat,
-                                            text: "Unfortunately, there are no users with whom you can start a conversation \U0001F626.",
+                                            text: "Unfortunately, there are no users with whom you can start a conversation \U0001F641.",
                                             replyMarkup: new ReplyKeyboardRemove());
                                     }
                                     break;
@@ -1260,7 +1188,8 @@ internal partial class HelperMethodsAndFuncs
                     }
                     break;
             }
-        } else
+        }
+        else
         {
             return;
         }
