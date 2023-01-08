@@ -700,6 +700,7 @@ internal partial class HelperMethodsAndFuncs
                 }
                 break;
             case "sending_file_for_upload":
+                state = "usual";
                 if (update.Type != UpdateType.Message)
                 {
                     return;
@@ -709,7 +710,6 @@ internal partial class HelperMethodsAndFuncs
                 {
                     if (update.Message.Text.ToLower() == "cancel")
                     {
-                        state = "usual";
                         await CancelAction(botClient, update, state);
                         return;
                     }

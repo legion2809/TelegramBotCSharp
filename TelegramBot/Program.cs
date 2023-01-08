@@ -8,7 +8,7 @@ internal partial class Program
     {
         var botClient = new TelegramBotClient(token);
 
-        Console.WriteLine($"[{DateTime.Now}] Bot {botClient.GetMeAsync().Result.Username} was successfully launched.", Console.ForegroundColor = ConsoleColor.DarkGreen);
+        Console.WriteLine($"[{DateTime.Now}] Bot {botClient.GetMeAsync().Result.FirstName + botClient.GetMeAsync().Result.LastName} was successfully launched.", Console.ForegroundColor = ConsoleColor.DarkGreen);
         Console.ResetColor();
 
         var connection = new SQLiteConnection();
