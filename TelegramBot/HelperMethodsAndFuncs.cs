@@ -355,7 +355,7 @@ internal partial class HelperMethodsAndFuncs
         {
             for (int i = 0; i < files.Length; i++)
             {
-                filesList.Add(i + 1, files[i].Substring(files[i].IndexOf("\\")));
+                filesList.Add(i + 1, files[i]);
             }
             return filesList;
         }
@@ -396,7 +396,7 @@ internal partial class HelperMethodsAndFuncs
             return;
         }
 
-        string value = "", fileName = filesList.TryGetValue(seqID, out value) ? fileName = value : "";
+        string value = "", fileName = filesList.TryGetValue(seqID, out value) ? value : "";
 
         switch (state)
         {
