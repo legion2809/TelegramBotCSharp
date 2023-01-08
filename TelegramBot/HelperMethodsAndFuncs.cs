@@ -1020,10 +1020,10 @@ internal partial class HelperMethodsAndFuncs
                                         replyMarkup: LinksInlineKeyboard());
                                     break;
                                 case "/pic":
-                                    string path = $"..//net6.0//VariousTrash//Pictures";
+                                    string path = Directory.CreateDirectory($"..//net6.0//VariousTrash//Pictures").ToString();
                                     Dictionary<int, string> picturesList = GetFilesList(path);
                                     
-                                    if (picturesList.Count == 0)
+                                    if (picturesList == null)
                                     {
                                         await botClient.SendTextMessageAsync(
                                             chatId: update.Message.Chat,
@@ -1034,11 +1034,14 @@ internal partial class HelperMethodsAndFuncs
                                     int randPic = rnd.Next(1, picturesList.Count + 1);
                                     string value = "", picName = picturesList.TryGetValue(randPic, out value) ? value : "";
 
-                                    await botClient.SendPhotoAsync(
-                                        chatId: update.Message.Chat,
-                                        photo: picName.Substring(picName.IndexOf("\\") + 1),
-                                        caption: "<b>Here is your picture, enjoy it :)</b>",
-                                        parseMode: ParseMode.Html);
+                                    await using (Stream stream = System.IO.File.OpenRead(picName))
+                                    {
+                                        await botClient.SendPhotoAsync(
+                                            chatId: update.Message.Chat,
+                                            photo: stream,
+                                            caption: "<b>Here is your picture, enjoy it :)</b>",
+                                            parseMode: ParseMode.Html);
+                                    }
                                     break;
                                 case "/startconv":
                                     users = SQLStuff.TakeUsersList($"SELECT id, username FROM users_list WHERE chatID != '{update.Message.Chat.Id}'");
