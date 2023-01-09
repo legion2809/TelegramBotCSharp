@@ -122,7 +122,7 @@ internal partial class HelperMethodsAndFuncs
 
     #region Send various types of messages to other user
     // Send specific messages to user (for /anonmessage command)
-    static async Task SendSpecificMessage(ITelegramBotClient botClient, Update update, string chat_id, string state)
+    static async Task SendSpecificMessage(ITelegramBotClient botClient, Update update, string chat_id, string state, string path = "")
     {
         switch (update.Message.Type)
         {
@@ -136,7 +136,7 @@ internal partial class HelperMethodsAndFuncs
             case MessageType.Document:
                 var fileId = update.Message.Document.FileId;
 
-                await DownloadFile(fileId, botClient, update, state);
+                await DownloadFile(botClient, update, state, path);
 
                 await botClient.SendDocumentAsync(
                     chatId: chat_id,
@@ -147,7 +147,7 @@ internal partial class HelperMethodsAndFuncs
             case MessageType.Photo:
                 fileId = update.Message.Photo.Last().FileId;
 
-                await DownloadFile(fileId, botClient, update, state);
+                await DownloadFile(botClient, update, state, path);
 
                 await botClient.SendPhotoAsync(
                     chatId: chat_id,
@@ -158,7 +158,7 @@ internal partial class HelperMethodsAndFuncs
             case MessageType.Audio:
                 fileId = update.Message.Audio.FileId;
 
-                await DownloadFile(fileId, botClient, update, state);
+                await DownloadFile(botClient, update, state, path);
 
                 await botClient.SendAudioAsync(
                     chatId: chat_id,
@@ -169,8 +169,7 @@ internal partial class HelperMethodsAndFuncs
             case MessageType.Voice:
                 fileId = update.Message.Voice.FileId;
 
-                await DownloadFile(fileId, botClient, update, state);
-
+                await DownloadFile(botClient, update, state, path);
 
                 await botClient.SendVoiceAsync(
                     chatId: chat_id,
@@ -182,7 +181,7 @@ internal partial class HelperMethodsAndFuncs
             case MessageType.Sticker:
                 fileId = update.Message.Sticker.FileId;
 
-                await DownloadFile(fileId, botClient, update, state);
+                await DownloadFile(botClient, update, state, path);
 
                 await botClient.SendStickerAsync(
                     chatId: chat_id,
@@ -192,7 +191,7 @@ internal partial class HelperMethodsAndFuncs
             case MessageType.Video:
                 fileId = update.Message.Video.FileId;
 
-                await DownloadFile(fileId, botClient, update, state);
+                await DownloadFile(botClient, update, state, path);
 
                 await botClient.SendVideoAsync(
                     chatId: chat_id,
@@ -203,7 +202,7 @@ internal partial class HelperMethodsAndFuncs
             case MessageType.VideoNote:
                 fileId = update.Message.VideoNote.FileId;
 
-                await DownloadFile(fileId, botClient, update, state);
+                await DownloadFile(botClient, update, state, path);
 
                 await botClient.SendVideoNoteAsync(
                     chatId: chat_id,
@@ -272,25 +271,55 @@ internal partial class HelperMethodsAndFuncs
     }
 
     // In order to user can upload files to his own storage
-    static async Task DownloadFile(string fileId, ITelegramBotClient botClient, Update update, string state = "")
+    static async Task DownloadFile(ITelegramBotClient botClient, Update update, string state = "", string fileId = "", string path = "")
     {
+        switch (update.Message.Type)
+        {
+            case MessageType.Document:
+                fileId = update.Message.Document.FileId;
+                break;
+            case MessageType.Photo:
+                fileId = update.Message.Photo.Last().FileId;
+                break;
+            case MessageType.Video:
+                fileId = update.Message.Video.FileId;
+                break;
+            case MessageType.Audio:
+                fileId = update.Message.Audio.FileId;
+                break;
+            case MessageType.Voice:
+                fileId = update.Message.Voice.FileId;
+                break;
+            case MessageType.Sticker:
+                fileId = update.Message.Sticker.FileId;
+                break;
+            case MessageType.VideoNote:
+                fileId = update.Message.VideoNote.FileId;
+                break;
+            default:
+                await botClient.SendTextMessageAsync(
+                    chatId: update.Message.Chat.Id,
+                    text: "Unknown type of message.");
+                return;
+        }
+
         var fileInfo = await botClient.GetFileAsync(fileId);
         var filePath = fileInfo.FilePath;
 
-        DirectoryInfo dir = Directory.CreateDirectory($"..//net6.0//VariousTrash//{update.Message.Chat.Id}");
+        DirectoryInfo dir = path == "" ? Directory.CreateDirectory($"..//net6.0//VariousTrash//{update.Message.Chat.Id}") : Directory.CreateDirectory(path);
 
-        string destinationFilePath = $"{dir}//{filePath.IndexOf("/") + 1}";
+        string destinationFilePath = $"{dir}//{filePath.Substring(filePath.IndexOf("/") + 1)}";
 
         await using (Stream fileStream = System.IO.File.OpenWrite(destinationFilePath))
         {
             await botClient.DownloadFileAsync(
                 filePath: filePath,
                 destination: fileStream);
-        }
 
-        if (state == "InConversation" || state == "usual")
-        {
-            System.IO.File.Delete(destinationFilePath);
+            if (destinationFilePath.Contains("AnonMessages"))
+            {
+                System.IO.File.Delete(destinationFilePath);
+            }
         }
     }
 
@@ -459,7 +488,6 @@ internal partial class HelperMethodsAndFuncs
 
     public static async Task ProcessingStates(string state, ITelegramBotClient botClient, Update update)
     {
-        string path = $"..//net6.0//VariousTrash//{update.Message.Chat.Id}";
         switch (state)
         {
             case "choosing_option":
@@ -619,6 +647,7 @@ internal partial class HelperMethodsAndFuncs
                 break;
             case "sending_file_for_upload":
                 state = "usual";
+
                 if (update.Type != UpdateType.Message)
                 {
                     return;
@@ -643,7 +672,7 @@ internal partial class HelperMethodsAndFuncs
 
                 SQLStuff.UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{update.Message.Chat.Id}'");
 
-                await DownloadFile(update.Message.Document.FileId.ToString(), botClient, update);
+                await DownloadFile(botClient, update, state);
                 await botClient.SendTextMessageAsync(
                     chatId: update.Message.Chat,
                     text: "Your file was successfully uploaded!",
@@ -665,8 +694,8 @@ internal partial class HelperMethodsAndFuncs
                             await CancelAction(botClient, update, state);
                             return;
                         }
-                        
-                        await ForDownloadingAndDeletingFiles(botClient, update, state, path);
+                        string filePath = $"..//net6.0//VariousTrash//{update.Message.Chat.Id}";
+                        await ForDownloadingAndDeletingFiles(botClient, update, state, filePath);
                     }
                 }
                 catch (FormatException)
@@ -693,8 +722,8 @@ internal partial class HelperMethodsAndFuncs
                             await CancelAction(botClient, update, state);
                             return;
                         }
-
-                        await ForDownloadingAndDeletingFiles(botClient, update, state, path);
+                        string filepath = $"..//net6.0//VariousTrash//{update.Message.Chat.Id}";
+                        await ForDownloadingAndDeletingFiles(botClient, update, state, filepath);
                     }
                 }
                 catch (FormatException)
@@ -772,12 +801,15 @@ internal partial class HelperMethodsAndFuncs
                 SQLStuff.UpdateDB($"UPDATE users_list SET send_message_to=NULL WHERE chatID='{update.Message.Chat.Id}'");
                 SQLStuff.UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{update.Message.Chat.Id}'");
 
-                await SendSpecificMessage(botClient, update, chat_id, state);
+                string path = Directory.CreateDirectory($"..//net6.0//AnonMessages//{update.Message.Chat.Id}").ToString();
+
+                await SendSpecificMessage(botClient, update, chat_id, state, path);
 
                 await botClient.SendTextMessageAsync(
                     chatId: update.Message.Chat,
                     text: $"Message was successfully delivered!",
                     replyMarkup: new ReplyKeyboardRemove());
+
                 break;
             case "choosing_companion":
                 state = "waiting_for_response";
