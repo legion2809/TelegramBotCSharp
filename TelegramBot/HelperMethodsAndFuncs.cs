@@ -131,7 +131,7 @@ internal partial class HelperMethodsAndFuncs
                     chatId: chat_id,
                     text: state == "InConversation" ? update.Message.Text : $"A message for you from anonymous user: <b>{update.Message.Text}</b>",
                     parseMode: ParseMode.Html,
-                    replyMarkup: new ReplyKeyboardRemove());
+                    replyMarkup: state != "InConversation" ? new ReplyKeyboardRemove() : StopKeyboard());
                 break;
             case MessageType.Document:
                 var fileId = update.Message.Document.FileId;
@@ -142,7 +142,7 @@ internal partial class HelperMethodsAndFuncs
                     chatId: chat_id,
                     document: fileId,
                     caption: state == "InConversation" ? update.Message.Text : $"A document for you from anonymous user.\n\n{(update.Message.Caption == null ? "A caption is empty" : update.Message.Caption)}",
-                    replyMarkup: new ReplyKeyboardRemove());
+                    replyMarkup: state != "InConversation" ? new ReplyKeyboardRemove() : StopKeyboard());
                 break;
             case MessageType.Photo:
                 fileId = update.Message.Photo.Last().FileId;
@@ -153,7 +153,7 @@ internal partial class HelperMethodsAndFuncs
                     chatId: chat_id,
                     photo: fileId,
                     caption: state == "InConversation" ? update.Message.Text : $"A picture (or photo) for you from anonymous user.\n\n{(update.Message.Caption == null ? "A caption is empty" : update.Message.Caption)}",
-                    replyMarkup: new ReplyKeyboardRemove());
+                    replyMarkup: state != "InConversation" ? new ReplyKeyboardRemove() : StopKeyboard());
                 break;
             case MessageType.Audio:
                 fileId = update.Message.Audio.FileId;
@@ -164,7 +164,7 @@ internal partial class HelperMethodsAndFuncs
                     chatId: chat_id,
                     audio: fileId,
                     caption: state == "InConversation" ? update.Message.Text : $"An audio for you from anonymous user.\n\n{(update.Message.Caption == null ? "A caption is empty" : update.Message.Caption)}",
-                    replyMarkup: new ReplyKeyboardRemove());
+                    replyMarkup: state != "InConversation" ? new ReplyKeyboardRemove() : StopKeyboard());
                 break;
             case MessageType.Voice:
                 fileId = update.Message.Voice.FileId;
@@ -175,7 +175,7 @@ internal partial class HelperMethodsAndFuncs
                     chatId: chat_id,
                     voice: fileId,
                     caption: state == "InConversation" ? update.Message.Text : $"A voice message for you from anonymous user.\n\n{(update.Message.Caption == null ? "A caption is empty" : update.Message.Caption)}",
-                    replyMarkup: new ReplyKeyboardRemove());
+                    replyMarkup: state != "InConversation" ? new ReplyKeyboardRemove() : StopKeyboard());
 
                 break;
             case MessageType.Sticker:
@@ -186,7 +186,7 @@ internal partial class HelperMethodsAndFuncs
                 await botClient.SendStickerAsync(
                     chatId: chat_id,
                     sticker: fileId,
-                    replyMarkup: new ReplyKeyboardRemove());
+                    replyMarkup: state != "InConversation" ? new ReplyKeyboardRemove() : StopKeyboard());
                 break;
             case MessageType.Video:
                 fileId = update.Message.Video.FileId;
@@ -197,7 +197,7 @@ internal partial class HelperMethodsAndFuncs
                     chatId: chat_id,
                     video: fileId,
                     caption: state == "InConversation" ? update.Message.Text : $"A video for you from anonymous user.\n\n{(update.Message.Caption == null ? "A caption is empty" : update.Message.Caption)}",
-                    replyMarkup: new ReplyKeyboardRemove());
+                    replyMarkup: state != "InConversation" ? new ReplyKeyboardRemove() : StopKeyboard());
                 break;
             case MessageType.VideoNote:
                 fileId = update.Message.VideoNote.FileId;
@@ -208,7 +208,7 @@ internal partial class HelperMethodsAndFuncs
                     chatId: chat_id,
                     videoNote: fileId,
                     duration: update.Message.VideoNote.Duration,
-                    replyMarkup: new ReplyKeyboardRemove());
+                    replyMarkup: state != "InConversation" ? new ReplyKeyboardRemove() : StopKeyboard());
                 break;
             case MessageType.Location:
                 double[] location = new double[2];
