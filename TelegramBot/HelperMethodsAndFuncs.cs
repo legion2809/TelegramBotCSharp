@@ -1,4 +1,7 @@
-﻿namespace TelegramBot;
+﻿using System.Collections.Generic;
+using Telegram.Bot;
+
+namespace TelegramBot;
 
 internal partial class HelperMethodsAndFuncs
 {
@@ -121,7 +124,7 @@ internal partial class HelperMethodsAndFuncs
     #endregion
 
     #region Send various types of messages to other user
-    // Send specific messages to user (for /anonmessage command)
+    // Send specific messages to user (for /anonmessage and /startconv commands)
     static async Task SendSpecificMessage(ITelegramBotClient botClient, Update update, string chat_id, string state, string path = "")
     {
         switch (update.Message.Type)
@@ -232,24 +235,61 @@ internal partial class HelperMethodsAndFuncs
 
     #region Methods and functions related with files
     // Checking if user's files list is empty or not
-    static string CheckFilesList(Update update)
+    static async Task CheckFilesList(ITelegramBotClient botClient, Update update, string state)
     {
         Dictionary<int, string> filesList = new Dictionary<int, string>();
         string path = $"..//net6.0//VariousTrash//{update.CallbackQuery.Message.Chat.Id}";
         string[] files = Directory.GetFiles(path);
         string messageText = "Here are a list of your files:\n\n";
 
-        if (files.Length != 0)
+        if (files.Length == 0)
         {
-            for (int i = 0; i < files.Length; i++)
-            {
-                filesList.Add(i + 1, files[i]);
-                messageText += $"<b>{i + 1}. {files[i].Substring(files[i].IndexOf("\\") + 1)}</b>\n";
-            }
-            return messageText;
+            await botClient.EditMessageTextAsync(
+                chatId: update.CallbackQuery.Message.Chat,
+                messageId: update.CallbackQuery.Message.MessageId,
+                text: "Unfortunately, your list of files is empty \U0001F641.",
+                replyMarkup: BackToSettingsInlineKeyboard(),
+                parseMode: ParseMode.Html);
+            return;
         }
 
-        return "NoFiles";
+        for (int i = 0; i < files.Length; i++)
+        {
+            filesList.Add(i + 1, files[i]);
+            messageText += $"<b>{i + 1}. {files[i].Substring(files[i].IndexOf("\\") + 1)}</b>\n";
+        }
+
+        await botClient.EditMessageTextAsync(
+            chatId: update.CallbackQuery.Message.Chat,
+            messageId: update.CallbackQuery.Message.MessageId,
+            text: messageText,
+            replyMarkup: BackToSettingsInlineKeyboard(),
+            parseMode: ParseMode.Html);
+
+        if (update.CallbackQuery.Data == "SeeFilesList")
+        {
+            return;
+        }
+
+        string message = "";
+
+        switch (update.CallbackQuery.Data)
+        {
+            case "DownloadFile":
+                state = "choosing_file_for_download";
+                message = "Enter the sequence number of the file you want to download, please.";
+                break;
+            case "DeleteFile":
+                state = "choosing_file_for_delete";
+                message = "Enter the sequence number of the file you want to delete, please.";
+                break;
+        }
+
+        SQLStuff.UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{update.CallbackQuery.Message.Chat.Id}'");
+        await botClient.SendTextMessageAsync(
+            chatId: update.CallbackQuery.Message.Chat.Id,
+            text: message,
+            replyMarkup: CancelKeyboardButton());
     }
 
     // Fetching list of user's files
@@ -316,7 +356,7 @@ internal partial class HelperMethodsAndFuncs
                 filePath: filePath,
                 destination: fileStream);
 
-            if (destinationFilePath.Contains("AnonMessages"))
+            if (destinationFilePath.Contains("AnonMessages") || state == "InConversation")
             {
                 System.IO.File.Delete(destinationFilePath);
             }
@@ -382,6 +422,7 @@ internal partial class HelperMethodsAndFuncs
             replyMarkup: OptionsWithFilesInlineKeyboard());
     }
 
+    // Processing users' conversation process
     static async Task ForConversations(ITelegramBotClient botClient, Update update, string state)
     {
         // for "yes", "no", "stop" and partially "cancel" options
@@ -483,6 +524,45 @@ internal partial class HelperMethodsAndFuncs
                 break;
             default:
                 break;
+        }
+    }
+
+    // Check users list in order to send a anonymous message to other user or start a conversation with one of them
+    static async Task CheckUsersList(ITelegramBotClient botClient, Update update, string state)
+    {
+        Dictionary<string, string> users = SQLStuff.TakeUsersList($"SELECT id, username FROM users_list WHERE chatID != '{update.Message.Chat.Id}'");
+
+        if (users.Count != 0)
+        {
+            string resultset;
+            string message_text = update.Message.Text == "/anonmessage" ? "List of users to whom you can send a message: \n\n" 
+                                                                        : "List of users to with whom you can start a conversation: \n\n";
+            foreach (var item in users)
+            {
+                resultset = $"<b>(ID: {item.Key}) - '{item.Value}'</b>\n";
+                message_text = message_text + resultset;
+            }
+
+            message_text = update.Message.Text == "/anonmessage" ? $"{message_text}\nEnter the ID of the user you want to send the message to:" 
+                                                                 : $"{message_text}\nEnter the ID of the user with whom you want to start a conversation:";
+
+            state = update.Message.Text == "/anonmessage" ? "waiting_for_userID" : "choosing_companion";
+            SQLStuff.UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{update.Message.Chat.Id}'");
+
+            await botClient.SendTextMessageAsync(
+                chatId: update.Message.Chat,
+                text: message_text,
+                parseMode: ParseMode.Html,
+                replyMarkup: CancelKeyboardButton());
+        }
+        else
+        {
+            await botClient.SendTextMessageAsync(
+                chatId: update.Message.Chat,
+                text: update.Message.Text == "/anonmessage" ? "Unfortunately, there are no users to whom you can send a message \U0001F641"
+                                                            : "Unfortunately, there are no users with whom you can start a conversation \U0001F641.",
+                replyMarkup: new ReplyKeyboardRemove());
+            return;
         }
     }
 
@@ -956,39 +1036,7 @@ internal partial class HelperMethodsAndFuncs
                                         text: $"Hello there, my friend {update.Message.Chat.FirstName} \U0001F44B. Thanks for starting to use me. What can I do for ya?");
                                     break;
                                 case "/anonmessage":
-                                    Dictionary<string, string> users = SQLStuff.TakeUsersList($"SELECT id, username FROM users_list WHERE chatID != '{update.Message.Chat.Id}'");
-
-                                    if (users.Count != 0)
-                                    {
-                                        string resultset;
-                                        string message_text = "List of users to whom you can send a message: \n\n";
-
-                                        foreach (var item in users)
-                                        {
-                                            resultset = $"<b>(ID: {item.Key}) - '{item.Value}'</b>\n";
-                                            message_text = message_text + resultset;
-                                        }
-                                        message_text = $"{message_text}\nEnter the ID of the user you want to send the message to:";
-
-                                        state = "waiting_for_userID";
-                                        SQLStuff.UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{update.Message.Chat.Id}'");
-
-                                        await botClient.SendTextMessageAsync(
-                                            chatId: update.Message.Chat,
-                                            text: message_text,
-                                            parseMode: ParseMode.Html,
-                                            replyMarkup: CancelKeyboardButton());
-                                    }
-                                    else
-                                    {
-                                        state = "usual";
-                                        SQLStuff.UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{update.Message.Chat.Id}'");
-
-                                        await botClient.SendTextMessageAsync(
-                                            chatId: update.Message.Chat,
-                                            text: "Unfortunately, there are no users to whom you can send a message \U0001F641",
-                                            replyMarkup: new ReplyKeyboardRemove());
-                                    }
+                                    await CheckUsersList(botClient, update, state);
                                     break;
                                 case "/calc":
                                     state = "choosing_option";
@@ -1076,39 +1124,7 @@ internal partial class HelperMethodsAndFuncs
                                     }
                                     break;
                                 case "/startconv":
-                                    users = SQLStuff.TakeUsersList($"SELECT id, username FROM users_list WHERE chatID != '{update.Message.Chat.Id}'");
-
-                                    if (users.Count != 0)
-                                    {
-                                        string resultset;
-                                        string message_text = "List of users with whom you can start a conversation: \n\n";
-
-                                        foreach (var item in users)
-                                        {
-                                            resultset = $"<b>(ID: {item.Key}) - '{item.Value}'</b>\n";
-                                            message_text = message_text + resultset;
-                                        }
-                                        message_text = $"{message_text}\nEnter the ID of the user with whom you want to start a conversation:";
-
-                                        state = "choosing_companion";
-                                        SQLStuff.UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{update.Message.Chat.Id}'");
-
-                                        await botClient.SendTextMessageAsync(
-                                            chatId: update.Message.Chat,
-                                            text: message_text,
-                                            parseMode: ParseMode.Html,
-                                            replyMarkup: CancelKeyboardButton());
-                                    }
-                                    else
-                                    {
-                                        state = "usual";
-                                        SQLStuff.UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{update.Message.Chat.Id}'");
-
-                                        await botClient.SendTextMessageAsync(
-                                            chatId: update.Message.Chat,
-                                            text: "Unfortunately, there are no users with whom you can start a conversation \U0001F641.",
-                                            replyMarkup: new ReplyKeyboardRemove());
-                                    }
+                                    await CheckUsersList(botClient, update, state);
                                     break;
                                 case "witam":
                                 case "hello":
@@ -1133,26 +1149,6 @@ internal partial class HelperMethodsAndFuncs
                         case "BackToFilesSettings":
                             await BackToSettings(botClient, update);
                             break;
-                        case "SeeFilesList":
-                            string result = CheckFilesList(update);
-                            if (result == "NoFiles")
-                            {
-                                await botClient.EditMessageTextAsync(
-                                    chatId: update.CallbackQuery.Message.Chat,
-                                    messageId: update.CallbackQuery.Message.MessageId,
-                                    text: "Unfortunately, your list of files is empty \U0001F626.",
-                                    replyMarkup: BackToSettingsInlineKeyboard(),
-                                    parseMode: ParseMode.Html);
-                                return;
-                            }
-
-                            await botClient.EditMessageTextAsync(
-                                chatId: update.CallbackQuery.Message.Chat,
-                                messageId: update.CallbackQuery.Message.MessageId,
-                                text: result,
-                                replyMarkup: BackToSettingsInlineKeyboard(),
-                                parseMode: ParseMode.Html);
-                            break;
                         case "UploadFile":
                             state = "sending_file_for_upload";
 
@@ -1163,60 +1159,10 @@ internal partial class HelperMethodsAndFuncs
                                 text: "Send me the file you want to upload to the server, please.",
                                 replyMarkup: CancelKeyboardButton());
                             break;
+                        case "SeeFilesList":
                         case "DownloadFile":
-                            result = CheckFilesList(update);
-                            state = "choosing_file_for_download";
-                            if (result == "NoFiles")
-                            {
-                                await botClient.EditMessageTextAsync(
-                                    chatId: update.CallbackQuery.Message.Chat,
-                                    messageId: update.CallbackQuery.Message.MessageId,
-                                    text: "Unfortunately, your list of files is empty \U0001F626.",
-                                    replyMarkup: BackToSettingsInlineKeyboard(),
-                                    parseMode: ParseMode.Html);
-                                return;
-                            }
-
-                            await botClient.EditMessageTextAsync(
-                                chatId: update.CallbackQuery.Message.Chat,
-                                messageId: update.CallbackQuery.Message.MessageId,
-                                text: result,
-                                replyMarkup: BackToSettingsInlineKeyboard(),
-                                parseMode: ParseMode.Html);
-
-                            SQLStuff.UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{update.CallbackQuery.Message.Chat.Id}'");
-
-                            await botClient.SendTextMessageAsync(
-                                chatId: update.CallbackQuery.Message.Chat,
-                                text: "Enter the sequence number of the file you want to download, please.",
-                                replyMarkup: CancelKeyboardButton());
-                            break;
                         case "DeleteFile":
-                            state = "choosing_file_for_delete";
-                            result = CheckFilesList(update);
-                            if (result == "NoFiles")
-                            {
-                                await botClient.EditMessageTextAsync(
-                                    chatId: update.CallbackQuery.Message.Chat,
-                                    messageId: update.CallbackQuery.Message.MessageId,
-                                    text: "Unfortunately, your list of files is empty \U0001F626.",
-                                    replyMarkup: BackToSettingsInlineKeyboard(),
-                                    parseMode: ParseMode.Html);
-                                return;
-                            }
-
-                            SQLStuff.UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{update.CallbackQuery.Message.Chat.Id}'");
-
-                            await botClient.EditMessageTextAsync(
-                                chatId: update.CallbackQuery.Message.Chat,
-                                messageId: update.CallbackQuery.Message.MessageId,
-                                text: result,
-                                replyMarkup: BackToSettingsInlineKeyboard(),
-                                parseMode: ParseMode.Html);
-                            await botClient.SendTextMessageAsync(
-                                chatId: update.CallbackQuery.Message.Chat,
-                                text: "Enter the sequence number of the file you want to delete, please.",
-                                replyMarkup: CancelKeyboardButton());
+                            await CheckFilesList(botClient, update, state);
                             break;
                         default:
                             break;
