@@ -25,7 +25,8 @@ internal partial class Program
                     "chatID   VARCHAR (100) UNIQUE ON CONFLICT IGNORE,\r\n" +
                     "username VARCHAR (200),\r\n" +
                     "state    VARCHAR (70),\r\n" +
-                    "send_message_to INTEGER\r\n);";
+                    "send_message_to INTEGER,\r\n" +
+                    "messaging_with INTEGER);";
                 cmd.ExecuteNonQuery();
                 connection.Close();
             }
