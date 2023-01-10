@@ -1,7 +1,4 @@
-﻿using System.Collections.Generic;
-using Telegram.Bot;
-
-namespace TelegramBot;
+﻿namespace TelegramBot;
 
 internal partial class HelperMethodsAndFuncs
 {
@@ -313,28 +310,53 @@ internal partial class HelperMethodsAndFuncs
     // In order to user can upload files to his own storage
     static async Task DownloadFile(ITelegramBotClient botClient, Update update, string state = "", string fileId = "", string path = "")
     {
+        Telegram.Bot.Types.File fileInfo;
+        string filePath = "";
+        string partofPath = "";
+
         switch (update.Message.Type)
         {
             case MessageType.Document:
                 fileId = update.Message.Document.FileId;
+                fileInfo = await botClient.GetFileAsync(fileId);
+                filePath = fileInfo.FilePath;
+                partofPath = update.Message.Document.FileName;
                 break;
             case MessageType.Photo:
                 fileId = update.Message.Photo.Last().FileId;
+                fileInfo = await botClient.GetFileAsync(fileId);
+                filePath = fileInfo.FilePath;
+                partofPath = filePath.Substring(filePath.IndexOf("/") + 1);
                 break;
             case MessageType.Video:
                 fileId = update.Message.Video.FileId;
+                fileInfo = await botClient.GetFileAsync(fileId);
+                filePath = fileInfo.FilePath;
+                partofPath = update.Message.Video.FileName;
                 break;
             case MessageType.Audio:
                 fileId = update.Message.Audio.FileId;
+                fileInfo = await botClient.GetFileAsync(fileId);
+                filePath = fileInfo.FilePath;
+                partofPath = update.Message.Audio.FileName;
                 break;
             case MessageType.Voice:
                 fileId = update.Message.Voice.FileId;
+                fileInfo = await botClient.GetFileAsync(fileId);
+                filePath = fileInfo.FilePath;
+                partofPath = filePath.Substring(filePath.IndexOf("/") + 1);
                 break;
             case MessageType.Sticker:
                 fileId = update.Message.Sticker.FileId;
+                fileInfo = await botClient.GetFileAsync(fileId);
+                filePath = fileInfo.FilePath;
+                partofPath = filePath.Substring(filePath.IndexOf("/") + 1);
                 break;
             case MessageType.VideoNote:
                 fileId = update.Message.VideoNote.FileId;
+                fileInfo = await botClient.GetFileAsync(fileId);
+                filePath = fileInfo.FilePath;
+                partofPath = filePath.Substring(filePath.IndexOf("/") + 1);
                 break;
             default:
                 await botClient.SendTextMessageAsync(
@@ -343,12 +365,9 @@ internal partial class HelperMethodsAndFuncs
                 return;
         }
 
-        var fileInfo = await botClient.GetFileAsync(fileId);
-        var filePath = fileInfo.FilePath;
-
         DirectoryInfo dir = path == "" ? Directory.CreateDirectory($"..//net6.0//VariousTrash//{update.Message.Chat.Id}") : Directory.CreateDirectory(path);
 
-        string destinationFilePath = $"{dir}//{filePath.Substring(filePath.IndexOf("/") + 1)}";
+        string destinationFilePath = $"{dir}//{partofPath}";
 
         await using (Stream fileStream = System.IO.File.OpenWrite(destinationFilePath))
         {
