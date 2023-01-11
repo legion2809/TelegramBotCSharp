@@ -44,7 +44,7 @@ internal partial class Logger
                 Console.WriteLine($"[{DateTime.Now}] User '{update.CallbackQuery.Message.Chat.FirstName}' (ID: {update.CallbackQuery.Message.Chat.Id}) has pressed the button with ID: '{callbackData}'");
                 break;
             default:
-                Console.WriteLine($"[{DateTime.Now}] An update came with following type -> '{update.Type}' from this user: '{update.Message.Chat.FirstName}' (ID: {update.Message.Chat.Id})");
+                Console.WriteLine($"[{DateTime.Now}] An update came with following type -> '{update.Type}'");
                 break;
         }
     }
