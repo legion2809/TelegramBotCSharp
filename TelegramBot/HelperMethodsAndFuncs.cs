@@ -6,6 +6,11 @@ internal partial class HelperMethodsAndFuncs
     static double first_num = 0, second_num = 0;
     static string math_oper = "";
 
+    // Users' files, temp files' and pictures pathes
+    static string tempPath = $"..//net6.0//AnonMessages//";
+    static string usersFilesPath = $"..//net6.0//VariousTrash//";
+    static string picturesPath = $"..//net6.0//VariousTrash//Pictures//";
+
     #region Reply and inline keyboards
     static InlineKeyboardMarkup LinksInlineKeyboard()
     {
@@ -34,6 +39,10 @@ internal partial class HelperMethodsAndFuncs
             {
                 InlineKeyboardButton.WithCallbackData(text: "Upload a file", callbackData: "UploadFile"),
                 InlineKeyboardButton.WithCallbackData(text: "Download a file", callbackData: "DownloadFile")
+            },
+            new []
+            {
+                InlineKeyboardButton.WithCallbackData(text: "Delete all files", callbackData: "DeleteAllFiles")
             }
         });
         return inlineKeyboard;
@@ -131,7 +140,7 @@ internal partial class HelperMethodsAndFuncs
                     chatId: chat_id,
                     text: state == "InConversation" ? update.Message.Text : $"A message for you from anonymous user: <b>{update.Message.Text}</b>",
                     parseMode: ParseMode.Html,
-                    replyMarkup: state != "InConversation" ? new ReplyKeyboardRemove() : StopKeyboard());
+                    replyMarkup: state != "InConversation" ? null : StopKeyboard());
                 break;
             case MessageType.Document:
                 var fileId = update.Message.Document.FileId;
@@ -142,7 +151,7 @@ internal partial class HelperMethodsAndFuncs
                     chatId: chat_id,
                     document: fileId,
                     caption: state == "InConversation" ? update.Message.Text : $"A document for you from anonymous user.\n\n{(update.Message.Caption == null ? "A caption is empty" : update.Message.Caption)}",
-                    replyMarkup: state != "InConversation" ? new ReplyKeyboardRemove() : StopKeyboard());
+                    replyMarkup: state != "InConversation" ? null : StopKeyboard());
                 break;
             case MessageType.Photo:
                 fileId = update.Message.Photo.Last().FileId;
@@ -153,7 +162,7 @@ internal partial class HelperMethodsAndFuncs
                     chatId: chat_id,
                     photo: fileId,
                     caption: state == "InConversation" ? update.Message.Text : $"A picture (or photo) for you from anonymous user.\n\n{(update.Message.Caption == null ? "A caption is empty" : update.Message.Caption)}",
-                    replyMarkup: state != "InConversation" ? new ReplyKeyboardRemove() : StopKeyboard());
+                    replyMarkup: state != "InConversation" ? null : StopKeyboard());
                 break;
             case MessageType.Audio:
                 fileId = update.Message.Audio.FileId;
@@ -164,7 +173,7 @@ internal partial class HelperMethodsAndFuncs
                     chatId: chat_id,
                     audio: fileId,
                     caption: state == "InConversation" ? update.Message.Text : $"An audio for you from anonymous user.\n\n{(update.Message.Caption == null ? "A caption is empty" : update.Message.Caption)}",
-                    replyMarkup: state != "InConversation" ? new ReplyKeyboardRemove() : StopKeyboard());
+                    replyMarkup: state != "InConversation" ? null : StopKeyboard());
                 break;
             case MessageType.Voice:
                 fileId = update.Message.Voice.FileId;
@@ -175,7 +184,7 @@ internal partial class HelperMethodsAndFuncs
                     chatId: chat_id,
                     voice: fileId,
                     caption: state == "InConversation" ? update.Message.Text : $"A voice message for you from anonymous user.\n\n{(update.Message.Caption == null ? "A caption is empty" : update.Message.Caption)}",
-                    replyMarkup: state != "InConversation" ? new ReplyKeyboardRemove() : StopKeyboard());
+                    replyMarkup: state != "InConversation" ? null : StopKeyboard());
 
                 break;
             case MessageType.Sticker:
@@ -186,7 +195,7 @@ internal partial class HelperMethodsAndFuncs
                 await botClient.SendStickerAsync(
                     chatId: chat_id,
                     sticker: fileId,
-                    replyMarkup: state != "InConversation" ? new ReplyKeyboardRemove() : StopKeyboard());
+                    replyMarkup: state != "InConversation" ? null : StopKeyboard());
                 break;
             case MessageType.Video:
                 fileId = update.Message.Video.FileId;
@@ -197,7 +206,7 @@ internal partial class HelperMethodsAndFuncs
                     chatId: chat_id,
                     video: fileId,
                     caption: state == "InConversation" ? update.Message.Text : $"A video for you from anonymous user.\n\n{(update.Message.Caption == null ? "A caption is empty" : update.Message.Caption)}",
-                    replyMarkup: state != "InConversation" ? new ReplyKeyboardRemove() : StopKeyboard());
+                    replyMarkup: state != "InConversation" ? null : StopKeyboard());
                 break;
             case MessageType.VideoNote:
                 fileId = update.Message.VideoNote.FileId;
@@ -208,7 +217,7 @@ internal partial class HelperMethodsAndFuncs
                     chatId: chat_id,
                     videoNote: fileId,
                     duration: update.Message.VideoNote.Duration,
-                    replyMarkup: state != "InConversation" ? new ReplyKeyboardRemove() : StopKeyboard());
+                    replyMarkup: state != "InConversation" ? null : StopKeyboard());
                 break;
             case MessageType.Location:
                 double[] location = new double[2];
@@ -222,7 +231,7 @@ internal partial class HelperMethodsAndFuncs
                 break;
             default:
                 await botClient.SendTextMessageAsync(
-                    chatId: update.Message.Chat.Id,
+                    chatId: update.Message.Chat,
                     text: "This type of message isn't supported. Try the supported one next time, please.",
                     replyMarkup: state == "InConversation" ? null : new ReplyKeyboardRemove());
                 break;
@@ -235,7 +244,7 @@ internal partial class HelperMethodsAndFuncs
     static async Task CheckFilesList(ITelegramBotClient botClient, Update update, string state)
     {
         Dictionary<int, string> filesList = new Dictionary<int, string>();
-        string path = $"..//net6.0//VariousTrash//{update.CallbackQuery.Message.Chat.Id}";
+        string path = Path.Combine(usersFilesPath, update.CallbackQuery.Message.Chat.Id.ToString());
         string[] files = Directory.GetFiles(path);
         string messageText = "Here are a list of your files:\n\n";
 
@@ -244,7 +253,7 @@ internal partial class HelperMethodsAndFuncs
             await botClient.EditMessageTextAsync(
                 chatId: update.CallbackQuery.Message.Chat,
                 messageId: update.CallbackQuery.Message.MessageId,
-                text: "Unfortunately, your list of files is empty \U0001F641.",
+                text: update.CallbackQuery.Data == "DeleteFile" || update.CallbackQuery.Data == "DeleteAllFiles" ? "There is nothing to delete." : "Unfortunately, your list of files is empty \U0001F641.",
                 replyMarkup: BackToSettingsInlineKeyboard(),
                 parseMode: ParseMode.Html);
             return;
@@ -280,13 +289,17 @@ internal partial class HelperMethodsAndFuncs
                 state = "choosing_file_for_delete";
                 message = "Enter the sequence number of the file you want to delete, please.";
                 break;
+            case "DeleteAllFiles":
+                state = "deciding_to_delete_or_not";
+                message = "Are you sure about your decision to delete all files?";
+                break;
         }
 
         SQLStuff.UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{update.CallbackQuery.Message.Chat.Id}'");
         await botClient.SendTextMessageAsync(
-            chatId: update.CallbackQuery.Message.Chat.Id,
+            chatId: update.CallbackQuery.Message.Chat,
             text: message,
-            replyMarkup: CancelKeyboardButton());
+            replyMarkup: update.CallbackQuery.Data == "DeleteAllFiles" ? YesNoKeyboard() : CancelKeyboardButton());
     }
 
     // Fetching list of user's files
@@ -311,8 +324,8 @@ internal partial class HelperMethodsAndFuncs
     static async Task DownloadFile(ITelegramBotClient botClient, Update update, string state = "", string fileId = "", string path = "")
     {
         Telegram.Bot.Types.File fileInfo;
-        string filePath = "";
-        string partofPath = "";
+        string filePath;
+        string partofPath;
 
         switch (update.Message.Type)
         {
@@ -365,7 +378,7 @@ internal partial class HelperMethodsAndFuncs
                 return;
         }
 
-        DirectoryInfo dir = path == "" ? Directory.CreateDirectory($"..//net6.0//VariousTrash//{update.Message.Chat.Id}") : Directory.CreateDirectory(path);
+        DirectoryInfo dir = path == "" ? Directory.CreateDirectory(Path.Combine(usersFilesPath, update.Message.Chat.Id.ToString())) : Directory.CreateDirectory(path);
 
         string destinationFilePath = $"{dir}//{partofPath}";
 
@@ -387,21 +400,32 @@ internal partial class HelperMethodsAndFuncs
     {
         Dictionary<int, string> filesList = GetFilesList(path);
 
-        int seqID = Convert.ToInt32(update.Message.Text);
+        string fileName = "";
 
-        if (seqID < 1 || seqID > filesList.Count)
+        if (state != "deciding_to_delete_or_not")
         {
-            await botClient.SendTextMessageAsync(
-                chatId: update.Message.Chat,
-                text: "You typed an invalid sequence number!");
-            return;
-        }
+            int seqID = Convert.ToInt32(update.Message.Text);
 
-        string value = "", fileName = filesList.TryGetValue(seqID, out value) ? value : "";
+            if (seqID < 1 || seqID > filesList.Count)
+            {
+                await botClient.SendTextMessageAsync(
+                    chatId: update.Message.Chat,
+                    text: "You typed an invalid sequence number!");
+                return;
+            }
+
+            string value;
+            fileName = filesList.TryGetValue(seqID, out value) ? value : "";
+        }
 
         switch (state)
         {
             case "choosing_file_for_download":
+                if (IgnoreNonMessageUpdates(update) == true)
+                {
+                    return;
+                }
+
                 state = "usual";
                 SQLStuff.UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{update.Message.Chat.Id}'");
 
@@ -415,15 +439,56 @@ internal partial class HelperMethodsAndFuncs
                 }
                 break;
             case "choosing_file_for_delete":
+                if (IgnoreNonMessageUpdates(update) == true)
+                {
+                    return;
+                }
+
                 state = "usual";
                 System.IO.File.Delete(fileName);
 
                 SQLStuff.UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{update.Message.Chat.Id}'");
 
                 await botClient.SendTextMessageAsync(
-                    chatId: update.Message.Chat.Id,
+                    chatId: update.Message.Chat,
                     text: "File was successfully deleted!",
                     replyMarkup: new ReplyKeyboardRemove());
+                break;
+            case "deciding_to_delete_or_not":
+                if (IgnoreNonMessageUpdates(update) == true)
+                {
+                    return;
+                }
+
+                state = "usual";
+                if (update.Message.Text.ToLower() != "yes" && update.Message.Text.ToLower() != "no")
+                {
+                    await botClient.SendTextMessageAsync(
+                        chatId: update.Message.Chat,
+                        text: "Choose or type only 'yes' or 'no'!");
+                }
+
+                if (update.Message.Text.ToLower() == "yes")
+                {
+                    foreach (var item in filesList)
+                    {
+                        System.IO.File.Delete(item.Value);
+                    }
+                    SQLStuff.UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{update.Message.Chat.Id}'");
+                    await botClient.SendTextMessageAsync(
+                        chatId: update.Message.Chat,
+                        text: "All files were successfully deleted!",
+                        replyMarkup: new ReplyKeyboardRemove());
+                }
+
+                if (update.Message.Text.ToLower() == "no")
+                {
+                    SQLStuff.UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{update.Message.Chat.Id}'");
+                    await botClient.SendTextMessageAsync(
+                        chatId: update.Message.Chat,
+                        text: "Fair enough, I even think that this is a reasonable decision \U0001F44D.",
+                        replyMarkup: new ReplyKeyboardRemove());
+                }
                 break;
             default:
                 break;
@@ -432,6 +497,16 @@ internal partial class HelperMethodsAndFuncs
     #endregion
 
     #region Processing state machine and messages from the user
+
+    static bool IgnoreNonMessageUpdates(Update update)
+    {
+        if (update.Type != UpdateType.Message)
+        {
+            return true;
+        }
+        return false;
+    }
+
     static async Task BackToSettings(ITelegramBotClient botClient, Update update)
     {
         await botClient.EditMessageTextAsync(
@@ -554,7 +629,7 @@ internal partial class HelperMethodsAndFuncs
         if (users.Count != 0)
         {
             string resultset;
-            string message_text = update.Message.Text == "/anonmessage" ? "List of users to whom you can send a message: \n\n" 
+            string message_text = update.Message.Text == "/anonmessage" ? "List of users to whom you can send a message: \n\n"
                                                                         : "List of users to with whom you can start a conversation: \n\n";
             foreach (var item in users)
             {
@@ -562,7 +637,7 @@ internal partial class HelperMethodsAndFuncs
                 message_text = message_text + resultset;
             }
 
-            message_text = update.Message.Text == "/anonmessage" ? $"{message_text}\nEnter the ID of the user you want to send the message to:" 
+            message_text = update.Message.Text == "/anonmessage" ? $"{message_text}\nEnter the ID of the user you want to send the message to:"
                                                                  : $"{message_text}\nEnter the ID of the user with whom you want to start a conversation:";
 
             state = update.Message.Text == "/anonmessage" ? "waiting_for_userID" : "choosing_companion";
@@ -587,13 +662,14 @@ internal partial class HelperMethodsAndFuncs
 
     public static async Task ProcessingStates(string state, ITelegramBotClient botClient, Update update)
     {
+        if (IgnoreNonMessageUpdates(update) == true)
+        {
+            return;
+        }
+
         switch (state)
         {
             case "choosing_option":
-                if (update.Type != UpdateType.Message)
-                {
-                    return;
-                }
                 switch (update.Message.Text.ToLower())
                 {
                     case "addition":
@@ -625,10 +701,6 @@ internal partial class HelperMethodsAndFuncs
             case "typefirstnum":
                 try
                 {
-                    if (update.Type != UpdateType.Message)
-                    {
-                        return;
-                    }
                     state = "typesecondnum";
                     double result = Convert.ToDouble(update.Message.Text);
                     first_num = result;
@@ -655,11 +727,6 @@ internal partial class HelperMethodsAndFuncs
             case "typesecondnum":
                 try
                 {
-                    if (update.Type != UpdateType.Message)
-                    {
-                        return;
-                    }
-
                     double result = Convert.ToDouble(update.Message.Text);
                     second_num = result;
 
@@ -747,11 +814,6 @@ internal partial class HelperMethodsAndFuncs
             case "sending_file_for_upload":
                 state = "usual";
 
-                if (update.Type != UpdateType.Message)
-                {
-                    return;
-                }
-
                 if (update.Message.Text != null)
                 {
                     if (update.Message.Text.ToLower() == "cancel")
@@ -778,11 +840,6 @@ internal partial class HelperMethodsAndFuncs
                     replyMarkup: new ReplyKeyboardRemove());
                 break;
             case "choosing_file_for_download":
-                if (update.Type != UpdateType.Message)
-                {
-                    return;
-                }
-
                 try
                 {
                     if (update.Message.Text != null)
@@ -793,8 +850,8 @@ internal partial class HelperMethodsAndFuncs
                             await CancelAction(botClient, update, state);
                             return;
                         }
-                        string filePath = $"..//net6.0//VariousTrash//{update.Message.Chat.Id}";
-                        await ForDownloadingAndDeletingFiles(botClient, update, state, filePath);
+
+                        await ForDownloadingAndDeletingFiles(botClient, update, state, Path.Combine(usersFilesPath, update.Message.Chat.Id.ToString()));
                     }
                 }
                 catch (FormatException)
@@ -808,11 +865,6 @@ internal partial class HelperMethodsAndFuncs
             case "choosing_file_for_delete":
                 try
                 {
-                    if (update.Type != UpdateType.Message)
-                    {
-                        return;
-                    }
-
                     if (update.Message.Text != null)
                     {
                         if (update.Message.Text.ToLower() == "cancel")
@@ -821,8 +873,7 @@ internal partial class HelperMethodsAndFuncs
                             await CancelAction(botClient, update, state);
                             return;
                         }
-                        string filepath = $"..//net6.0//VariousTrash//{update.Message.Chat.Id}";
-                        await ForDownloadingAndDeletingFiles(botClient, update, state, filepath);
+                        await ForDownloadingAndDeletingFiles(botClient, update, state, Path.Combine(usersFilesPath, update.Message.Chat.Id.ToString()));
                     }
                 }
                 catch (FormatException)
@@ -833,16 +884,14 @@ internal partial class HelperMethodsAndFuncs
                     return;
                 }
                 break;
+            case "deciding_to_delete_or_not":
+                await ForDownloadingAndDeletingFiles(botClient, update, state, Path.Combine(usersFilesPath, update.Message.Chat.Id.ToString()));
+                break;
             case "waiting_for_userID":
                 state = "waiting_a_message";
 
                 try
                 {
-                    if (update.Type != UpdateType.Message)
-                    {
-                        return;
-                    }
-
                     int id = Convert.ToInt32(update.Message.Text);
                     string receiverChatID = SQLStuff.ReadDBRecords($"SELECT chatID FROM users_list WHERE id='{id}'");
 
@@ -883,11 +932,6 @@ internal partial class HelperMethodsAndFuncs
 
                 state = "usual";
 
-                if (update.Type != UpdateType.Message)
-                {
-                    return;
-                }
-
                 if (update.Message.Type == MessageType.Text && update.Message.Text.ToLower() == "cancel")
                 {
                     await CancelAction(botClient, update, state);
@@ -900,7 +944,7 @@ internal partial class HelperMethodsAndFuncs
                 SQLStuff.UpdateDB($"UPDATE users_list SET send_message_to=NULL WHERE chatID='{update.Message.Chat.Id}'");
                 SQLStuff.UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{update.Message.Chat.Id}'");
 
-                string path = Directory.CreateDirectory($"..//net6.0//AnonMessages//{update.Message.Chat.Id}").ToString();
+                string path = Directory.CreateDirectory(Path.Combine(tempPath, update.Message.Chat.Id.ToString())).ToString();
 
                 await SendSpecificMessage(botClient, update, chat_id, state, path);
 
@@ -969,11 +1013,6 @@ internal partial class HelperMethodsAndFuncs
                 }
                 break;
             case "choosing_yes_or_no":
-                if (update.Type != UpdateType.Message)
-                {
-                    return;
-                }
-
                 switch (update.Message.Text.ToLower())
                 {
                     case "yes":
@@ -991,11 +1030,6 @@ internal partial class HelperMethodsAndFuncs
                 }
                 break;
             case "waiting_for_response":
-                if (update.Type != UpdateType.Message)
-                {
-                    return;
-                }
-
                 if (update.Message.Text.ToLower() == "cancel")
                 {
                     await ForConversations(botClient, update, state);
@@ -1119,14 +1153,14 @@ internal partial class HelperMethodsAndFuncs
                                         replyMarkup: LinksInlineKeyboard());
                                     break;
                                 case "/pic":
-                                    string path = Directory.CreateDirectory($"..//net6.0//VariousTrash//Pictures").ToString();
-                                    Dictionary<int, string> picturesList = GetFilesList(path);
-                                    
+                                    Directory.CreateDirectory(picturesPath).ToString();
+                                    Dictionary<int, string> picturesList = GetFilesList(picturesPath);
+
                                     if (picturesList == null)
                                     {
                                         await botClient.SendTextMessageAsync(
                                             chatId: update.Message.Chat,
-                                            text: "No pictures today, sorry \U0001F641");
+                                            text: "No pictures today, sorry \U0001F641.");
                                         return;
                                     }
 
@@ -1181,6 +1215,7 @@ internal partial class HelperMethodsAndFuncs
                         case "SeeFilesList":
                         case "DownloadFile":
                         case "DeleteFile":
+                        case "DeleteAllFiles":
                             await CheckFilesList(botClient, update, state);
                             break;
                         default:
