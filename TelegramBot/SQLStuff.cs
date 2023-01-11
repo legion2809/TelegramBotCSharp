@@ -112,12 +112,13 @@ internal partial class SQLStuff
             var DB = new SQLiteConnection($"Data Source={dbName};");
             DB.Open();
             SQLiteCommand command = DB.CreateCommand();
-            command.CommandText = "INSERT INTO users_list VALUES (NULL, @chatID, @username, @state, @send_message_to)";
+            command.CommandText = "INSERT INTO users_list VALUES (NULL, @chatID, @username, @state, @send_message_to, @messaging_with)";
             string query = command.CommandText;
             command.Parameters.AddWithValue("@chatID", chatID);
             command.Parameters.AddWithValue("@username", username);
             command.Parameters.AddWithValue("@state", "usual");
             command.Parameters.AddWithValue("@send_message_to", null);
+            command.Parameters.AddWithValue("@messaging_with", null);
             command.ExecuteNonQuery();
             DB.Close();
             SQLQueriesLog(query);
