@@ -461,11 +461,12 @@ internal partial class HelperMethodsAndFuncs
                 }
 
                 state = "usual";
-                if (update.Message.Text.ToLower() != "yes" && update.Message.Text.ToLower() != "no")
+                if (update.Message.Type != MessageType.Text || (update.Message.Text.ToLower() != "yes" && update.Message.Text.ToLower() != "no"))
                 {
                     await botClient.SendTextMessageAsync(
                         chatId: update.Message.Chat,
                         text: "Choose or type only 'yes' or 'no'!");
+                    return;
                 }
 
                 if (update.Message.Text.ToLower() == "yes")
