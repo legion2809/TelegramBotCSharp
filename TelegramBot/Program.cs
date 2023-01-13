@@ -2,10 +2,17 @@
 
 internal partial class Program
 {
-    const string token = "5874882825:AAFi9wC0xJfy0hKdzCiZGyv6Rz1BMs6C1Fo";
+    static readonly string token = Environment.GetEnvironmentVariable("ACCESS_TOKEN");
 
     static void Main(string[] args)
     {
+        if (token == null)
+        {
+            Console.WriteLine($"[{DateTime.Now}] Unable to get bot's access token!", Console.ForegroundColor = ConsoleColor.Red);
+            Console.ResetColor();
+            return;
+        }
+
         var botClient = new TelegramBotClient(token);
 
         Console.WriteLine($"[{DateTime.Now}] Bot {botClient.GetMeAsync().Result.FirstName + botClient.GetMeAsync().Result.LastName} was successfully launched.", Console.ForegroundColor = ConsoleColor.DarkGreen);
