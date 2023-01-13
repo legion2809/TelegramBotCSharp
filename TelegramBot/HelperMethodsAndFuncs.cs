@@ -387,11 +387,11 @@ internal partial class HelperMethodsAndFuncs
             await botClient.DownloadFileAsync(
                 filePath: filePath,
                 destination: fileStream);
+        }
 
-            if (destinationFilePath.Contains("AnonMessages") || state == "InConversation")
-            {
-                System.IO.File.Delete(destinationFilePath);
-            }
+        if (destinationFilePath.Contains("AnonMessages") || state == "InConversation")
+        {
+            System.IO.File.Delete(destinationFilePath);
         }
     }
 
