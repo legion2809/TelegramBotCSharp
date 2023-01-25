@@ -118,8 +118,9 @@ internal partial class HelperMethodsAndFuncs
     }
 
     // "Cancel" keyboard button logic
-    static async Task CancelAction(ITelegramBotClient botClient, Update update, string state)
+    static async Task CancelAction(ITelegramBotClient botClient, Update update)
     {
+        string state = "usual";
         SQLStuff.UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{update.Message.Chat.Id}'");
         await botClient.SendTextMessageAsync(
             chatId: update.Message.Chat,
@@ -150,7 +151,7 @@ internal partial class HelperMethodsAndFuncs
                 await botClient.SendDocumentAsync(
                     chatId: chat_id,
                     document: fileId,
-                    caption: state == "InConversation" ? update.Message.Text : $"A document for you from anonymous user.\n\n{(update.Message.Caption == null ? "A caption is empty" : update.Message.Caption)}",
+                    caption: state == "InConversation" ? update.Message.Text : $"A document for you from anonymous user.\n\n{(update.Message.Caption == null ? "A caption is empty" : "Caption: " + update.Message.Caption)}",
                     replyMarkup: state != "InConversation" ? null : StopKeyboard());
                 break;
             case MessageType.Photo:
@@ -161,7 +162,7 @@ internal partial class HelperMethodsAndFuncs
                 await botClient.SendPhotoAsync(
                     chatId: chat_id,
                     photo: fileId,
-                    caption: state == "InConversation" ? update.Message.Text : $"A picture (or photo) for you from anonymous user.\n\n{(update.Message.Caption == null ? "A caption is empty" : update.Message.Caption)}",
+                    caption: state == "InConversation" ? update.Message.Text : $"A picture (or photo) for you from anonymous user.\n\n{(update.Message.Caption == null ? "A caption is empty" : "Caption: " + update.Message.Caption)}",
                     replyMarkup: state != "InConversation" ? null : StopKeyboard());
                 break;
             case MessageType.Audio:
@@ -172,7 +173,7 @@ internal partial class HelperMethodsAndFuncs
                 await botClient.SendAudioAsync(
                     chatId: chat_id,
                     audio: fileId,
-                    caption: state == "InConversation" ? update.Message.Text : $"An audio for you from anonymous user.\n\n{(update.Message.Caption == null ? "A caption is empty" : update.Message.Caption)}",
+                    caption: state == "InConversation" ? update.Message.Text : $"An audio for you from anonymous user.\n\n{(update.Message.Caption == null ? "A caption is empty" : "Caption: " + update.Message.Caption)}",
                     replyMarkup: state != "InConversation" ? null : StopKeyboard());
                 break;
             case MessageType.Voice:
@@ -183,9 +184,8 @@ internal partial class HelperMethodsAndFuncs
                 await botClient.SendVoiceAsync(
                     chatId: chat_id,
                     voice: fileId,
-                    caption: state == "InConversation" ? update.Message.Text : $"A voice message for you from anonymous user.\n\n{(update.Message.Caption == null ? "A caption is empty" : update.Message.Caption)}",
+                    caption: state == "InConversation" ? update.Message.Text : $"A voice message for you from anonymous user.\n\n{(update.Message.Caption == null ? "A caption is empty" : "Caption: " + update.Message.Caption)}",
                     replyMarkup: state != "InConversation" ? null : StopKeyboard());
-
                 break;
             case MessageType.Sticker:
                 fileId = update.Message.Sticker.FileId;
@@ -205,7 +205,7 @@ internal partial class HelperMethodsAndFuncs
                 await botClient.SendVideoAsync(
                     chatId: chat_id,
                     video: fileId,
-                    caption: state == "InConversation" ? update.Message.Text : $"A video for you from anonymous user.\n\n{(update.Message.Caption == null ? "A caption is empty" : update.Message.Caption)}",
+                    caption: state == "InConversation" ? update.Message.Text : $"A video for you from anonymous user.\n\n{(update.Message.Caption == null ? "A caption is empty" : "Caption: " + update.Message.Caption)}",
                     replyMarkup: state != "InConversation" ? null : StopKeyboard());
                 break;
             case MessageType.VideoNote:
@@ -246,7 +246,7 @@ internal partial class HelperMethodsAndFuncs
         Dictionary<int, string> filesList = new Dictionary<int, string>();
         string path = Path.Combine(usersFilesPath, update.CallbackQuery.Message.Chat.Id.ToString());
         string[] files = Directory.GetFiles(path);
-        string messageText = "Here are a list of your files:\n\n";
+        string messageText = "Here is a list of your files:\n\n";
 
         if (files.Length == 0)
         {
@@ -265,17 +265,21 @@ internal partial class HelperMethodsAndFuncs
             messageText += $"<b>{i + 1}. {files[i].Substring(files[i].IndexOf("\\") + 1)}</b>\n";
         }
 
-        await botClient.EditMessageTextAsync(
-            chatId: update.CallbackQuery.Message.Chat,
-            messageId: update.CallbackQuery.Message.MessageId,
-            text: messageText,
-            replyMarkup: BackToSettingsInlineKeyboard(),
-            parseMode: ParseMode.Html);
-
         if (update.CallbackQuery.Data == "SeeFilesList")
         {
+            await botClient.EditMessageTextAsync(
+                chatId: update.CallbackQuery.Message.Chat,
+                messageId: update.CallbackQuery.Message.MessageId,
+                text: messageText,
+                replyMarkup: BackToSettingsInlineKeyboard(),
+                parseMode: ParseMode.Html);
             return;
         }
+
+        await botClient.SendTextMessageAsync(
+            chatId: update.CallbackQuery.Message.Chat,
+            text: messageText,
+            parseMode: ParseMode.Html);
 
         string message = "";
 
@@ -689,8 +693,7 @@ internal partial class HelperMethodsAndFuncs
                     default:
                         if (update.Message.Text.ToLower() == "cancel")
                         {
-                            state = "usual";
-                            await CancelAction(botClient, update, state);
+                            await CancelAction(botClient, update);
                             break;
                         }
                         await botClient.SendTextMessageAsync(
@@ -715,8 +718,7 @@ internal partial class HelperMethodsAndFuncs
                 {
                     if (update.Message.Text.ToLower() == "cancel")
                     {
-                        state = "usual";
-                        await CancelAction(botClient, update, state);
+                        await CancelAction(botClient, update);
                         break;
                     }
                     await botClient.SendTextMessageAsync(
@@ -802,8 +804,7 @@ internal partial class HelperMethodsAndFuncs
                 {
                     if (update.Message.Text.ToLower() == "cancel")
                     {
-                        state = "usual";
-                        await CancelAction(botClient, update, state);
+                        await CancelAction(botClient, update);
                         break;
                     }
                     await botClient.SendTextMessageAsync(
@@ -812,6 +813,24 @@ internal partial class HelperMethodsAndFuncs
                     return;
                 }
                 break;
+            case "choosing_file_to_convert":
+                if (update.Message.Text.ToLower() == "cancel")
+                {
+                    await CancelAction(botClient, update);
+                    break;
+                }
+                
+                if (update.Type != UpdateType.Message || update.Message.Type != MessageType.Document
+                    || (!update.Message.Document.FileName.Contains(".doc") && !update.Message.Document.FileName.Contains(".docx")))
+                {
+                    await botClient.SendTextMessageAsync(
+                        chatId: update.Message.Chat.Id,
+                        text: "Send me only a Word document, please!");
+                    return;
+                }
+
+                await DownloadFile(botClient, update, state);
+                break;
             case "sending_file_for_upload":
                 state = "usual";
 
@@ -819,7 +838,7 @@ internal partial class HelperMethodsAndFuncs
                 {
                     if (update.Message.Text.ToLower() == "cancel")
                     {
-                        await CancelAction(botClient, update, state);
+                        await CancelAction(botClient, update);
                         return;
                     }
 
@@ -847,8 +866,7 @@ internal partial class HelperMethodsAndFuncs
                     {
                         if (update.Message.Text.ToLower() == "cancel")
                         {
-                            state = "usual";
-                            await CancelAction(botClient, update, state);
+                            await CancelAction(botClient, update);
                             return;
                         }
 
@@ -870,8 +888,7 @@ internal partial class HelperMethodsAndFuncs
                     {
                         if (update.Message.Text.ToLower() == "cancel")
                         {
-                            state = "usual";
-                            await CancelAction(botClient, update, state);
+                            await CancelAction(botClient, update);
                             return;
                         }
                         await ForDownloadingAndDeletingFiles(botClient, update, state, Path.Combine(usersFilesPath, update.Message.Chat.Id.ToString()));
@@ -919,8 +936,7 @@ internal partial class HelperMethodsAndFuncs
                 {
                     if (update.Message.Text.ToLower() == "cancel")
                     {
-                        state = "usual";
-                        await CancelAction(botClient, update, state);
+                        await CancelAction(botClient, update);
                         break;
                     }
                     await botClient.SendTextMessageAsync(
@@ -935,7 +951,7 @@ internal partial class HelperMethodsAndFuncs
 
                 if (update.Message.Type == MessageType.Text && update.Message.Text.ToLower() == "cancel")
                 {
-                    await CancelAction(botClient, update, state);
+                    await CancelAction(botClient, update);
                     break;
                 }
 
@@ -1003,8 +1019,7 @@ internal partial class HelperMethodsAndFuncs
                 {
                     if (update.Message.Text.ToLower() == "cancel")
                     {
-                        state = "usual";
-                        await CancelAction(botClient, update, state);
+                        await CancelAction(botClient, update);
                         break;
                     }
                     await botClient.SendTextMessageAsync(
@@ -1140,6 +1155,14 @@ internal partial class HelperMethodsAndFuncs
                                     await botClient.SendTextMessageAsync(
                                         chatId: update.Message.Chat,
                                         text: $"Number rolled: {randNum}");
+                                    break;
+                                case "/doctopdf":
+                                    state = "choosing_file_to_convert";
+                                    SQLStuff.UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{update.Message.Chat.Id}'");
+                                    await botClient.SendTextMessageAsync(
+                                        chatId: update.Message.Chat,
+                                        text: "Send me a Word document that you want to convert to PDF (.doc or .docx).",
+                                        replyMarkup: CancelKeyboardButton());
                                     break;
                                 case "/files":
                                     await botClient.SendTextMessageAsync(
