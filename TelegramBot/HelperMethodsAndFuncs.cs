@@ -813,24 +813,6 @@ internal partial class HelperMethodsAndFuncs
                     return;
                 }
                 break;
-            case "choosing_file_to_convert":
-                if (update.Message.Text.ToLower() == "cancel")
-                {
-                    await CancelAction(botClient, update);
-                    break;
-                }
-                
-                if (update.Type != UpdateType.Message || update.Message.Type != MessageType.Document
-                    || (!update.Message.Document.FileName.Contains(".doc") && !update.Message.Document.FileName.Contains(".docx")))
-                {
-                    await botClient.SendTextMessageAsync(
-                        chatId: update.Message.Chat.Id,
-                        text: "Send me only a Word document, please!");
-                    return;
-                }
-
-                await DownloadFile(botClient, update, state);
-                break;
             case "sending_file_for_upload":
                 state = "usual";
 
@@ -1155,14 +1137,6 @@ internal partial class HelperMethodsAndFuncs
                                     await botClient.SendTextMessageAsync(
                                         chatId: update.Message.Chat,
                                         text: $"Number rolled: {randNum}");
-                                    break;
-                                case "/doctopdf":
-                                    state = "choosing_file_to_convert";
-                                    SQLStuff.UpdateDB($"UPDATE users_list SET state='{state}' WHERE chatID='{update.Message.Chat.Id}'");
-                                    await botClient.SendTextMessageAsync(
-                                        chatId: update.Message.Chat,
-                                        text: "Send me a Word document that you want to convert to PDF (.doc or .docx).",
-                                        replyMarkup: CancelKeyboardButton());
                                     break;
                                 case "/files":
                                     await botClient.SendTextMessageAsync(
